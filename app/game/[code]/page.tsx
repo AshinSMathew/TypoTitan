@@ -255,7 +255,7 @@ export default function GamePage() {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              You'll face 15 cybersecurity commands across 3 difficulty levels. Type as fast and accurately as possible!
+              {"You'll face 15 cybersecurity commands across 3 difficulty levels. Type as fast and accurately as possible!"}
             </p>
             <Button onClick={startGame} className="w-full neon-glow" size="lg">
               Start Challenge

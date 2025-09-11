@@ -27,7 +27,7 @@ interface ChatPanelProps {
   isSpectator?: boolean
 }
 
-export function ChatPanel({ roomCode, currentUser, isSpectator = false }: ChatPanelProps) {
+export function ChatPanel({ currentUser, isSpectator = false }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",

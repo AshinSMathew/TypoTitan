@@ -20,12 +20,12 @@ export default function RoomPage() {
   const params = useParams()
   const router = useRouter()
   const roomCode = params.code as string
-  const [players, setPlayers] = useState<Player[]>([
+  const [players] = useState<Player[]>([
     { id: "1", name: "CyberHacker", isHost: true, isReady: true },
     { id: "2", name: "TerminalMaster", isHost: false, isReady: false },
     { id: "3", name: "CodeNinja", isHost: false, isReady: true },
   ])
-  const [isHost, setIsHost] = useState(true)
+  const [isHost] = useState(true)
   const [copied, setCopied] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
 
@@ -229,10 +229,10 @@ export default function RoomPage() {
           </CardHeader>
           <CardContent className="font-mono text-sm">
             <div className="space-y-1">
-              <div className="text-muted-foreground"># Sample commands you'll be typing:</div>
-              <div className="text-primary">sudo netstat -tulpn</div>
-              <div className="text-secondary">grep -r "password" /var/log/</div>
-              <div className="text-accent">ssh -i ~/.ssh/id_rsa user@192.168.1.100</div>
+              <div className="text-muted-foreground">{"# Sample commands you'll be typing:"}</div>
+              <div className="text-primary">{"sudo netstat -tulpn"}</div>
+              <div className="text-secondary">{"grep -r 'password' /var/log/"}</div>
+              <div className="text-accent">{"ssh -i ~/.ssh/id_rsa user@192.168.1.100"}</div>
               <div className="text-primary typing-cursor mt-2"></div>
             </div>
           </CardContent>
