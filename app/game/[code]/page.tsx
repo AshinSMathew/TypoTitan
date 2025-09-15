@@ -227,7 +227,7 @@ export default function GamePage() {
 
   useLayoutEffect(() => {
     if (gameStarted) inputRef.current?.focus()
-  }, [currentCommandIndex]) 
+  }, [currentCommandIndex, gameStarted]) 
 
   const startGame = () => {
     setGameStarted(true)

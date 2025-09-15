@@ -1,69 +1,49 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import * as jose from "jose"
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+import { adminAuth, adminDb, ADMIN_EMAILS } from "@/lib/firebaseAdmin"
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json()
+    const { idToken, name, email, college } = await request.json()
 
-    // Validate required fields
-    if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      )
+    if (!idToken) {
+      return NextResponse.json({ error: "Missing idToken" }, { status: 400 })
     }
 
-    // Check if user exists
-    const userResult = await db`
-      SELECT id, name, email, college, is_admin FROM users WHERE email = ${email} LIMIT 1`
+    const decoded = await adminAuth.verifyIdToken(idToken)
 
-    if (userResult.length === 0) {
-      return NextResponse.json(
-        { error: "No account found with this email" },
-        { status: 404 }
-      )
+    // Persist minimal profile in Firestore users collection
+    if (email && name) {
+      const isAdmin = email ? ADMIN_EMAILS.has(email.toLowerCase()) : false
+      await adminDb.collection('users').doc(decoded.uid).set({
+        uid: decoded.uid,
+        email: email || decoded.email || null,
+        name: name || decoded.name || null,
+        college: college || null,
+        isAdmin,
+      }, { merge: true })
     }
 
-    const user = userResult[0]
-
-    // Generate JWT token
-    const secret = new TextEncoder().encode(JWT_SECRET)
-    const token = await new jose.SignJWT({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      college: user.college,
-      isAdmin: user.is_admin
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('7d')
-      .sign(secret)
-
-    // Create response
     const response = NextResponse.json(
-      { 
+      {
         success: true,
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          college: user.college,
-          isAdmin: user.is_admin
+          uid: decoded.uid,
+          email: email || decoded.email,
+          name: name || decoded.name,
+          college: college || null,
+          isAdmin: email ? ADMIN_EMAILS.has(email.toLowerCase()) : false,
         }
       },
       { status: 200 }
     )
 
-    // Set HTTP-only cookie
+    // Set cookie for server routes convenience (still Firebase ID token)
     response.cookies.set({
       name: 'authToken',
-      value: token,
+      value: idToken,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60,
       path: '/',
       sameSite: 'strict'
     })
@@ -73,8 +53,8 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: "Invalid token" },
+      { status: 401 }
     )
   }
 }

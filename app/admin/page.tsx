@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Terminal, Eye, Trophy, LogOut } from "lucide-react"
 
 type User = {
-  id: number
+  uid: string
   name: string
   email: string
-  college: string
+  college: string | null
   isAdmin: boolean
 }
 

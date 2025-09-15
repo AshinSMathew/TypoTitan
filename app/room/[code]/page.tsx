@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Terminal, Users, Crown, Play, Copy, Check, Share2, Loader2 } from "lucide-react"
+import { Terminal, Users, Crown, Play, Copy, Check, Share2 } from "lucide-react"
 
 interface Player {
   id: string
@@ -32,13 +32,20 @@ export default function RoomPage() {
   const code = params.code as string
   const [room, setRoom] = useState<Room | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  type AuthUser = {
+    uid?: string
+    id?: string
+    email?: string
+    name?: string
+  }
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [isHost, setIsHost] = useState(false)
   const [copied, setCopied] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
-  const ws = useRef<WebSocket | null>(null)
+  const unsubRoomRef = useRef<null | (() => void)>(null)
+  const unsubPartsRef = useRef<null | (() => void)>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,10 +75,12 @@ export default function RoomPage() {
 
         setRoom(roomData.room)
         setPlayers(roomData.participants)
-        setIsHost(userData.user.id === roomData.room.created_by)
-        
-        // Connect to WebSocket server
-        connectWebSocket(userData.user.id, code)
+        setIsHost((userData.user.uid || userData.user.id) === roomData.room.created_by)
+
+        // Start Firestore realtime listeners
+        startRealtime(code)
+        // Ensure user is joined
+        await fetch(`/api/room/${code}/join`, { method: 'POST' })
         
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -84,72 +93,32 @@ export default function RoomPage() {
     fetchData()
 
     return () => {
-      // Clean up WebSocket connection
-      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        ws.current.close()
-      }
+      stopRealtime()
     }
   }, [code, router])
 
-  const connectWebSocket = (userId: string, code: string) => {
-    // Use environment variable for WebSocket server URL
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000'
-    const websocket = new WebSocket(`${wsUrl}?code=${code}&userId=${userId}`)
-    
-    websocket.onopen = () => {
-      console.log("WebSocket connection established")
-      ws.current = websocket
-    }
-    
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      console.log("WebSocket message received:", data)
-      
-      switch (data.type) {
-        case 'room_state':
-          setRoom(data.room)
-          setPlayers(data.participants)
-          break
-        case 'participant_joined':
-          // Refresh room data
-          fetchRoomData()
-          break
-        case 'participant_left':
-          // Refresh room data
-          fetchRoomData()
-          break
-        case 'game_started':
-          // Redirect to game page
-          router.push(`/game/${code}`)
-          break
-        default:
-          console.log("Unknown message type:", data.type)
-      }
-    }
-    
-    websocket.onerror = (error) => {
-      console.error("WebSocket error:", error)
-    }
-    
-    websocket.onclose = () => {
-      console.log("WebSocket connection closed")
-      ws.current = null
-    }
+  const startRealtime = (code: string) => {
+    import('@/lib/firebaseClient').then(({ clientDb }) => {
+      // Import Firestore APIs from the module to ensure proper types and instances
+      import('firebase/firestore').then(({ doc, onSnapshot, collection, query }) => {
+        const roomDoc = doc(clientDb, 'rooms', code)
+        const partsQ = query(collection(doc(clientDb, 'rooms', code), 'participants'))
+        unsubRoomRef.current = onSnapshot(roomDoc, (snap) => {
+          if (snap.exists()) setRoom(snap.data() as Room)
+        })
+        unsubPartsRef.current = onSnapshot(partsQ, (snap) => {
+          const list = snap.docs.map((d) => d.data() as Player)
+          setPlayers(list)
+        })
+      })
+    })
   }
 
-  const fetchRoomData = async () => {
-    try {
-      const response = await fetch(`/api/rooms/${code}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setRoom(data.room)
-        setPlayers(data.participants)
-      }
-    } catch (error) {
-      console.error("Error fetching room data:", error)
-    }
+  const stopRealtime = () => {
+    if (unsubRoomRef.current) unsubRoomRef.current()
+    if (unsubPartsRef.current) unsubPartsRef.current()
   }
+
 
   const copyRoomCode = async () => {
     await navigator.clipboard.writeText(code)
@@ -174,14 +143,9 @@ export default function RoomPage() {
       setCountdown((prev) => {
         if (prev === 1) {
           clearInterval(timer)
-          
-          // Send start game message via WebSocket
-          if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({
-              type: 'start_game',
-              code: code
-            }))
-          }
+          // Update room status and navigate
+          fetch('/api/room/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
+            .finally(() => router.push(`/game/${code}`))
           
           return null
         }
@@ -190,10 +154,9 @@ export default function RoomPage() {
     }, 1000)
   }
 
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <Terminal className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
           <p>Loading room...</p>
@@ -204,94 +167,96 @@ export default function RoomPage() {
 
   if (error || !room) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
           <Terminal className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Room Not Found</h2>
           <p className="text-muted-foreground mb-4">{error || "The room you're looking for doesn't exist."}</p>
-          <Button onClick={() => router.push("/")}>Go Home</Button>
+          <Button onClick={() => router.push("/")} className="w-full sm:w-auto">Go Home</Button>
         </div>
       </div>
     )
   }
 
   // Check if current user is already in the room
-  const isUserInRoom = players.some(player => player.id === currentUser.id)
+  const isUserInRoom = players.some(player => player.id === (currentUser?.id || currentUser?.uid))
 
   return (
     <div className="min-h-screen bg-background terminal-grid">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-7xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
           <div className="flex items-center gap-4">
-            <Terminal className="w-8 h-8 text-primary neon-glow" />
-            <div>
-              <h1 className="text-3xl font-bold font-mono">{room.name}</h1>
-              <p className="text-muted-foreground">
+            <Terminal className="w-6 h-6 sm:w-8 sm:h-8 text-primary neon-glow flex-shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold font-mono truncate">{room.name}</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
                 {room.status === 'waiting' ? 'Waiting for players to join...' : 'Game in progress...'}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={copyRoomCode}
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent text-xs sm:text-sm"
+              size="sm"
             >
-              {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-              {code}
+              {copied ? <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> : <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
+              <span className="truncate">{code}</span>
             </Button>
             <Button
               variant="outline"
               onClick={shareSpectatorLink}
-              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent"
+              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent text-xs sm:text-sm"
+              size="sm"
             >
-              <Share2 className="w-4 h-4 mr-2" />
-              Share Spectator Link
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+              <span className="hidden sm:inline">Share Spectator Link</span>
+              <span className="sm:hidden">Spectator</span>
             </Button>
           </div>
         </div>
 
-
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Players List */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2 lg:order-1">
             <Card className="border-primary/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-primary">
-                  <Users className="w-5 h-5" />
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-primary text-lg sm:text-xl">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   Players ({players.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4">
+                <div className="grid gap-3 sm:gap-4">
                   {players.map((player) => (
                     <div
                       key={player.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20"
+                      className="flex items-center justify-between p-3 sm:p-4 rounded-lg border border-border bg-muted/20"
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="border-2 border-primary">
-                          <AvatarFallback className="bg-primary text-primary-foreground font-mono">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar className="border-2 border-primary w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                          <AvatarFallback className="bg-primary text-primary-foreground font-mono text-xs sm:text-sm">
                             {player.name.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold">{player.name}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-semibold text-sm sm:text-base truncate">{player.name}</span>
                             {player.is_host && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Crown className="w-3 h-3 mr-1" />
+                              <Badge variant="secondary" className="text-xs flex-shrink-0">
+                                <Crown className="w-2 h-2 sm:w-3 sm:h-3 mr-1" />
                                 HOST
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">
                             {player.college || "No college specified"}
                           </p>
                         </div>
                       </div>
-                      <Badge variant="default" className="bg-primary text-primary-foreground">
+                      <Badge variant="default" className="bg-primary text-primary-foreground text-xs flex-shrink-0 ml-2">
                         JOINED
                       </Badge>
                     </div>
@@ -301,53 +266,103 @@ export default function RoomPage() {
             </Card>
           </div>
 
-          {/* Game Controls */}
-          <div className="space-y-6">
+          {/* Game Controls Sidebar */}
+          <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
             {/* Room Info */}
             <Card className="border-accent/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-accent">Room Info</CardTitle>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-accent text-lg">Room Info</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-sm">Status:</span>
-                  <Badge variant={room.status === 'waiting' ? 'default' : 'secondary'}>
+                  <Badge variant={room.status === 'waiting' ? 'default' : 'secondary'} className="text-xs">
                     {room.status.toUpperCase()}
                   </Badge>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-sm">Visibility:</span>
                   <span className="text-sm font-mono">{room.is_public ? "Public" : "Private"}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-sm">Created:</span>
                   <span className="text-sm font-mono">
                     {new Date(room.created_at).toLocaleDateString()}
                   </span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Players:</span>
+                  <span className="text-sm font-mono">{players.length}</span>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Start Game */}
-            {isHost && isUserInRoom && room.status === 'waiting' && (
-              <Card className="border-primary/50 bg-card/50 backdrop-blur-sm">
-                <CardContent className="pt-6">
-                  {countdown ? (
-                    <div className="text-center">
-                      <div className="text-6xl font-bold text-primary mb-2 neon-glow">{countdown}</div>
-                      <p className="text-sm text-muted-foreground">Starting game...</p>
+            {/* Debug Info - Remove in production */}
+            <Card className="border-yellow-500/50 bg-yellow-500/5 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-yellow-500 text-sm">Debug Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="text-xs space-y-1">
+                  <div>Is Host: <span className="font-mono">{isHost ? 'true' : 'false'}</span></div>
+                  <div>User in Room: <span className="font-mono">{isUserInRoom ? 'true' : 'false'}</span></div>
+                  <div>Room Status: <span className="font-mono">{room.status}</span></div>
+                  <div>Current User ID: <span className="font-mono">{currentUser?.id || currentUser?.uid || 'null'}</span></div>
+                  <div>Room Created By: <span className="font-mono">{room.created_by}</span></div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Start Game Button - More Visible */}
+            {room.status === 'waiting' && (
+              <Card className="border-green-500/50 bg-green-500/5 backdrop-blur-sm">
+                <CardContent className="pt-4 sm:pt-6">
+                  {isHost && isUserInRoom ? (
+                    countdown ? (
+                      <div className="text-center">
+                        <div className="text-4xl sm:text-6xl font-bold text-green-500 mb-2 neon-glow animate-pulse">
+                          {countdown}
+                        </div>
+                        <p className="text-sm text-muted-foreground">Starting game...</p>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={startGame}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white border-green-500 neon-glow shadow-lg"
+                        size="lg"
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Start Challenge
+                      </Button>
+                    )
+                  ) : !isHost ? (
+                    <div className="text-center p-4 bg-muted/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        Waiting for the host to start the game...
+                      </p>
                     </div>
-                  ) : (
-                    <Button
-                      onClick={startGame}
-                      className="w-full neon-glow"
-                      size="lg"
-                      disabled={players.length < 1}
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Start Challenge
-                    </Button>
-                  )}
+                  ) : !isUserInRoom ? (
+                    <div className="text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                      <p className="text-sm text-yellow-600">
+                        You need to join the room first
+                      </p>
+                    </div>
+                  ) : null}
+              </CardContent>
+              </Card>
+            )}
+
+            {room.status !== 'waiting' && (
+              <Card className="border-blue-500/50 bg-blue-500/5 backdrop-blur-sm">
+                <CardContent className="pt-4 sm:pt-6 text-center">
+                  <p className="text-sm text-blue-400 mb-4">Game is in progress</p>
+                  <Button
+                    onClick={() => router.push(`/game/${code}`)}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    size="lg"
+                  >
+                    Join Game
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -355,16 +370,16 @@ export default function RoomPage() {
         </div>
 
         {/* Terminal Preview */}
-        <Card className="mt-8 bg-black/80 border-primary/50">
-          <CardHeader>
-            <CardTitle className="text-primary font-mono text-sm">root@arena:~$ preview_commands</CardTitle>
+        <Card className="mt-6 sm:mt-8 bg-black/80 border-primary/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-primary font-mono text-xs sm:text-sm">root@arena:~$ preview_commands</CardTitle>
           </CardHeader>
-          <CardContent className="font-mono text-sm">
+          <CardContent className="font-mono text-xs sm:text-sm">
             <div className="space-y-1">
               <div className="text-muted-foreground">{"# Sample commands you'll be typing:"}</div>
-              <div className="text-primary">{"sudo netstat -tulpn"}</div>
-              <div className="text-secondary">{"grep -r 'password' /var/log/"}</div>
-              <div className="text-accent">{"ssh -i ~/.ssh/id_rsa user@192.168.1.100"}</div>
+              <div className="text-primary break-all">{"sudo netstat -tulpn"}</div>
+              <div className="text-secondary break-all">{"grep -r 'password' /var/log/"}</div>
+              <div className="text-accent break-all">{"ssh -i ~/.ssh/id_rsa user@192.168.1.100"}</div>
               <div className="text-primary typing-cursor mt-2"></div>
             </div>
           </CardContent>

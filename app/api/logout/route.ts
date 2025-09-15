@@ -7,7 +7,7 @@ export async function POST() {
       { status: 200 }
     )
 
-    // Clear the auth cookie
+    // Clear the auth cookie (Firebase ID token stored here for server use)
     response.cookies.set({
       name: 'authToken',
       value: '',

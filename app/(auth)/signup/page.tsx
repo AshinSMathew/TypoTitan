@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { clientAuth } from "@/lib/firebaseClient"
+import { createUserWithEmailAndPassword, getIdToken, updateProfile } from "firebase/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +14,7 @@ export default function SignupPage() {
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [college, setCollege] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -20,12 +23,13 @@ export default function SignupPage() {
     setIsLoading(true)
     
     try {
+      const cred = await createUserWithEmailAndPassword(clientAuth, email, password)
+      if (name) await updateProfile(cred.user, { displayName: name })
+      const token = await getIdToken(cred.user, true)
       const response = await fetch('/api/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, college }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token, name, email, college })
       })
       
       const data = await response.json()
@@ -73,6 +77,18 @@ export default function SignupPage() {
                 required 
                 disabled={isLoading}
                 placeholder="Enter your email address"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+                disabled={isLoading}
+                placeholder="Create a password"
               />
             </div>
             <div className="space-y-2">

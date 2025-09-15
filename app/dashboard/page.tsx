@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Users, Trophy, LogOut } from "lucide-react"
 
 type User = {
-  id: number
+  uid: string
   name: string
   email: string
-  college: string
-  isAdmin: boolean
+  college: string | null
+  isAdmin?: boolean
 }
 
 export default function DashboardPage() {
@@ -72,7 +72,7 @@ export default function DashboardPage() {
               <CardTitle className="text-accent">Join Room</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button className="w-full" size="lg" onClick={() => router.push("/join")}>
+              <Button className="w-full" size="lg" onClick={() => router.push("/join")}> 
                 <Users className="w-4 h-4 mr-2" />
                 Join
               </Button>

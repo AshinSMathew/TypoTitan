@@ -1,52 +1,59 @@
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import * as jose from "jose"
+import { adminDb, adminAuth } from "@/lib/firebaseAdmin"
 
 // POST /api/rooms - Create a new room
 export async function POST(request: Request) {
   try {
-    // Verify authentication
-    const token = request.headers.get('cookie')?.split('; ')
+    // Verify Firebase ID token (from cookie or header)
+    const cookieToken = request.headers.get('cookie')?.split('; ')
       .find(row => row.startsWith('authToken='))?.split('=')[1]
+    const authHeader = request.headers.get('authorization') || ''
+    const headerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined
+    const idToken = headerToken || cookieToken
 
-    if (!token) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      )
+    if (!idToken) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    // Verify JWT token
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
-    const { payload } = await jose.jwtVerify(token, secret)
-    
-    if (!payload.id) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      )
-    }
+    const decoded = await adminAuth.verifyIdToken(idToken)
 
     const { name } = await request.json()
     
     // Generate unique room code
     const code = generateRoomKey()
     
-    // Insert room into database
-    const result = await db`
-      INSERT INTO rooms (room_key, name, created_by, is_public) 
-       VALUES (${code}, ${name || `Room by ${payload.name}`}, ${payload.id}, ${true}) 
-       RETURNING id, room_key, name, created_by, is_public, created_at`
+    // Create room document in Firestore
+    const roomRef = adminDb.collection('rooms').doc(code)
+    await roomRef.set({
+      room_key: code,
+      name: name || `Room by ${decoded.name || decoded.email}`,
+      created_by: decoded.uid,
+      is_public: true,
+      status: 'waiting',
+      created_at: new Date().toISOString(),
+    })
 
     // Add creator as participant
-    await db`
-      INSERT INTO room_participants (room_id, user_id) 
-       VALUES (${result[0].id}, ${payload.id})`
+    await roomRef.collection('participants').doc(decoded.uid).set({
+      id: decoded.uid,
+      name: decoded.name || null,
+      email: decoded.email || null,
+      college: null,
+      is_host: true,
+      joined_at: new Date().toISOString(),
+    })
 
     return NextResponse.json(
       { 
         success: true,
-        room: result[0]
+        room: {
+          room_key: code,
+          name: name || `Room by ${decoded.name || decoded.email}`,
+          created_by: decoded.uid,
+          is_public: true,
+          status: 'waiting',
+          created_at: new Date().toISOString(),
+        }
       },
       { status: 201 }
     )
@@ -63,41 +70,34 @@ export async function POST(request: Request) {
 // GET /api/rooms - Get all public rooms
 export async function GET(request: Request) {
   try {
-    // Verify authentication
-    const token = request.headers.get('cookie')?.split('; ')
+    // Verify Firebase token
+    const cookieToken = request.headers.get('cookie')?.split('; ')
       .find(row => row.startsWith('authToken='))?.split('=')[1]
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      )
+    const authHeader = request.headers.get('authorization') || ''
+    const headerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined
+    const idToken = headerToken || cookieToken
+    if (!idToken) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
-
-    // Verify JWT token
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET!)
-    const { payload } = await jose.jwtVerify(token, secret)
-    
-    if (!payload.id) {
-      return NextResponse.json(
-        { error: "Invalid token" },
-        { status: 401 }
-      )
-    }
+    await adminAuth.verifyIdToken(idToken)
 
     // Get all public rooms with participant count
-    const result = await db`
-      SELECT r.*, COUNT(rp.user_id) as participant_count
-       FROM rooms r
-       LEFT JOIN room_participants rp ON r.id = rp.room_id
-       WHERE r.is_public = true AND r.status = 'waiting'
-       GROUP BY r.id
-       ORDER BY r.created_at DESC`
+    const roomsSnap = await adminDb.collection('rooms')
+      .where('is_public', '==', true)
+      .where('status', '==', 'waiting')
+      .orderBy('created_at', 'desc')
+      .get()
+
+    const rooms = await Promise.all(roomsSnap.docs.map(async (doc) => {
+      const data = doc.data() as Record<string, unknown>
+      const partsSnap = await adminDb.collection('rooms').doc(doc.id).collection('participants').get()
+      return { ...data, participant_count: partsSnap.size }
+    }))
 
     return NextResponse.json(
       { 
         success: true,
-        rooms: result
+        rooms
       },
       { status: 200 }
     )
