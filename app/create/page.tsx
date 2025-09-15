@@ -6,22 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Terminal, Users, Clock, Target } from "lucide-react"
+import { Terminal } from "lucide-react"
 
 export default function CreateRoomPage() {
   const router = useRouter()
   const [roomName, setRoomName] = useState("")
-  const [playerName, setPlayerName] = useState("")
-  const [maxPlayers, setMaxPlayers] = useState([4])
-  const [difficulty, setDifficulty] = useState("mixed")
-  const [timeLimit, setTimeLimit] = useState([60])
 
   const createRoom = () => {
-    // Generate random room code
     const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-    // In a real app, this would create the room on the server
     router.push(`/room/${roomCode}`)
   }
 
@@ -40,22 +32,10 @@ export default function CreateRoomPage() {
 
           <Card className="border-primary/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-primary">Arena Configuration</CardTitle>
-              <CardDescription>Customize your typing challenge settings</CardDescription>
+              <CardTitle className="text-primary">Create Room</CardTitle>
+              <CardDescription>Minimal setup — no limits, no timers</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Player Name */}
-              <div className="space-y-2">
-                <Label htmlFor="playerName">Your Hacker Name</Label>
-                <Input
-                  id="playerName"
-                  placeholder="Enter your name"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  className="bg-input border-border focus:border-primary"
-                />
-              </div>
-
               {/* Room Name */}
               <div className="space-y-2">
                 <Label htmlFor="roomName">Arena Name (Optional)</Label>
@@ -68,60 +48,8 @@ export default function CreateRoomPage() {
                 />
               </div>
 
-              {/* Max Players */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Max Players: {maxPlayers[0]}
-                </Label>
-                <Slider value={maxPlayers} onValueChange={setMaxPlayers} max={8} min={2} step={1} className="w-full" />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>2</span>
-                  <span>8</span>
-                </div>
-              </div>
-
-              {/* Difficulty */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Difficulty Mode
-                </Label>
-                <Select value={difficulty} onValueChange={setDifficulty}>
-                  <SelectTrigger className="bg-input border-border">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">Easy Only - Basic commands</SelectItem>
-                    <SelectItem value="medium">Medium Only - Network tools</SelectItem>
-                    <SelectItem value="hard">Hard Only - Advanced security</SelectItem>
-                    <SelectItem value="mixed">Mixed - All difficulty levels</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Time Limit */}
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Time Limit per Round: {timeLimit[0]}s
-                </Label>
-                <Slider
-                  value={timeLimit}
-                  onValueChange={setTimeLimit}
-                  max={120}
-                  min={30}
-                  step={15}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>30s</span>
-                  <span>120s</span>
-                </div>
-              </div>
-
               {/* Create Button */}
-              <Button onClick={createRoom} className="w-full neon-glow" size="lg" disabled={!playerName.trim()}>
+              <Button onClick={createRoom} className="w-full neon-glow" size="lg">
                 Create Arena
               </Button>
             </CardContent>

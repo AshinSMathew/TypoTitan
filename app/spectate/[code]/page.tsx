@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ChatPanel } from "@/components/chat-panel"
-import { Eye, Users, Clock, Home, Volume2, VolumeX } from "lucide-react"
+import { Eye, Users, Home, Volume2, VolumeX } from "lucide-react"
 
 interface Player {
   id: string
@@ -30,7 +29,6 @@ export default function SpectatePage() {
 
   const [gameState] = useState({
     currentLevel: "medium" as "easy" | "medium" | "hard",
-    timeLeft: 45,
     isActive: true,
   })
 
@@ -103,10 +101,7 @@ export default function SpectatePage() {
             <Badge variant="outline" className={`border-current ${getDifficultyColor(gameState.currentLevel)}`}>
               {gameState.currentLevel.toUpperCase()} LEVEL
             </Badge>
-            <div className="flex items-center gap-2 text-destructive">
-              <Clock className="w-4 h-4" />
-              <span className="font-mono text-lg">{gameState.timeLeft}s</span>
-            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">No time limit</div>
             <Button
               variant="ghost"
               size="sm"
@@ -292,8 +287,7 @@ export default function SpectatePage() {
         </div>
       </div>
 
-      {/* Chat Panel */}
-      <ChatPanel roomCode={roomCode} currentUser="Spectator" isSpectator={true} />
+      {/* Chat removed */}
     </div>
   )
 }

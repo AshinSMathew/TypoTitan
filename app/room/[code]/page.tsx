@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ChatPanel } from "@/components/chat-panel"
 import { Terminal, Users, Crown, Play, Copy, Check, Share2 } from "lucide-react"
 
 interface Player {
@@ -183,7 +182,7 @@ export default function RoomPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Time Limit:</span>
-                  <span className="text-sm font-mono">60s</span>
+                  <span className="text-sm font-mono">None</span>
                 </div>
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs text-muted-foreground">
@@ -207,15 +206,12 @@ export default function RoomPage() {
                       onClick={startGame}
                       className="w-full neon-glow"
                       size="lg"
-                      disabled={players.filter((p) => p.isReady).length < 2}
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Start Challenge
                     </Button>
                   )}
-                  {players.filter((p) => p.isReady).length < 2 && (
-                    <p className="text-xs text-muted-foreground text-center mt-2">Need at least 2 ready players</p>
-                  )}
+                  
                 </CardContent>
               </Card>
             )}
@@ -239,7 +235,7 @@ export default function RoomPage() {
         </Card>
       </div>
 
-      <ChatPanel roomCode={roomCode} currentUser="CyberHacker" />
+      {/* Chat removed */}
     </div>
   )
 }

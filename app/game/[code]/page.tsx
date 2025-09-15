@@ -9,8 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ChatPanel } from "@/components/chat-panel"
-import { Terminal, Clock, Users, Eye, Share2 } from "lucide-react"
+import { Terminal, Users, Eye, Share2 } from "lucide-react"
 
 interface Player {
   id: string
@@ -80,7 +79,6 @@ export default function GamePage() {
   const [currentLevel, setCurrentLevel] = useState<"easy" | "medium" | "hard">("easy")
   const [currentCommandIndex, setCurrentCommandIndex] = useState(0)
   const [userInput, setUserInput] = useState("")
-  const [timeLeft, setTimeLeft] = useState(60)
   const [gameStarted, setGameStarted] = useState(false)
   const [gameFinished, setGameFinished] = useState(false)
   const [errors, setErrors] = useState<number[]>([])
@@ -109,14 +107,7 @@ export default function GamePage() {
     }
   }
 
-  useEffect(() => {
-    if (gameStarted && timeLeft > 0 && !gameFinished) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
-      return () => clearTimeout(timer)
-    } else if (timeLeft === 0) {
-      setGameFinished(true)
-    }
-  }, [gameStarted, timeLeft, gameFinished])
+  // No timer logic per simplified requirements
 
   useEffect(() => {
     if (gameStarted && inputRef.current) {
@@ -193,7 +184,6 @@ export default function GamePage() {
             setErrors([])
             setLevelProgress(0)
           } else {
-            // Game completed
             setGameFinished(true)
             router.push(`/results/${roomCode}`)
           }
@@ -282,10 +272,7 @@ export default function GamePage() {
             <Badge variant="outline" className={`border-current ${getDifficultyColor(currentLevel)}`}>
               {currentLevel.toUpperCase()} LEVEL
             </Badge>
-            <div className="flex items-center gap-2 text-destructive">
-              <Clock className="w-4 h-4" />
-              <span className="font-mono text-lg">{timeLeft}s</span>
-            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">No time limit</div>
             <Button
               variant="outline"
               size="sm"
@@ -433,7 +420,7 @@ export default function GamePage() {
         </div>
       </div>
 
-      <ChatPanel roomCode={roomCode} currentUser="CyberHacker" />
+      {/* Chat removed */}
     </div>
   )
 }

@@ -11,11 +11,10 @@ import { Users } from "lucide-react"
 export default function JoinRoomPage() {
   const router = useRouter()
   const [roomCode, setRoomCode] = useState("")
-  const [playerName, setPlayerName] = useState("")
   const [error, setError] = useState("")
 
   const joinRoom = () => {
-    if (!roomCode.trim() || !playerName.trim()) {
+    if (!roomCode.trim()) {
       setError("Please fill in all fields")
       return
     }
@@ -48,18 +47,6 @@ export default function JoinRoomPage() {
               <CardDescription>Join an existing typing challenge</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Player Name */}
-              <div className="space-y-2">
-                <Label htmlFor="playerName">Your Hacker Name</Label>
-                <Input
-                  id="playerName"
-                  placeholder="Enter your name"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  className="bg-input border-border focus:border-accent"
-                />
-              </div>
-
               {/* Room Code */}
               <div className="space-y-2">
                 <Label htmlFor="roomCode">Arena Code</Label>
@@ -80,7 +67,7 @@ export default function JoinRoomPage() {
                 onClick={joinRoom}
                 className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
                 size="lg"
-                disabled={!playerName.trim() || !roomCode.trim()}
+                disabled={!roomCode.trim()}
               >
                 Join Arena
               </Button>

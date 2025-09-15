@@ -1,27 +1,13 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Terminal, Users, Trophy, Zap, Shield, Code, TrendingUp } from "lucide-react"
+import { Terminal, Users, Zap, Shield } from "lucide-react"
 
 export default function HomePage() {
   const router = useRouter()
-  const [roomCode, setRoomCode] = useState("")
-  const [playerName, setPlayerName] = useState("")
-
-  const handleCreateRoom = () => {
-    if (!playerName.trim()) return
-    router.push(`/create?name=${encodeURIComponent(playerName)}`)
-  }
-
-  const handleJoinRoom = () => {
-    if (!playerName.trim() || !roomCode.trim()) return
-    router.push(`/join?name=${encodeURIComponent(playerName)}&code=${roomCode}`)
-  }
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -62,81 +48,13 @@ export default function HomePage() {
           </div>
         </header>
 
-        {/* Main Action Cards */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
-          {/* Create Room Card */}
-          <Card className="border-primary/50 bg-card/50 backdrop-blur-sm hover:border-primary transition-all duration-300 neon-glow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Code className="w-6 h-6" />
-                Create Room
-              </CardTitle>
-              <CardDescription>Start a new typing arena and invite friends to compete</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input
-                placeholder="Enter your name"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                className="bg-input border-border focus:border-primary"
-              />
-              <Button
-                className="w-full neon-glow hover:scale-105 transition-transform"
-                size="lg"
-                onClick={handleCreateRoom}
-                disabled={!playerName.trim()}
-              >
-                Create Arena
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Join Room Card */}
-          <Card className="border-accent/50 bg-card/50 backdrop-blur-sm hover:border-accent transition-all duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-accent">
-                <Users className="w-6 h-6" />
-                Join Room
-              </CardTitle>
-              <CardDescription>Enter a room code to join an existing typing challenge</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Input
-                placeholder="Enter your name"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                className="bg-input border-border focus:border-accent"
-              />
-              <Input
-                placeholder="Room Code (e.g., HACK123)"
-                value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                className="bg-input border-border focus:border-accent font-mono"
-              />
-              <Button
-                variant="outline"
-                className="w-full border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent"
-                size="lg"
-                onClick={handleJoinRoom}
-                disabled={!playerName.trim() || !roomCode.trim()}
-              >
-                Join Arena
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Main Actions */}
+        <div className="grid sm:grid-cols-2 gap-6 max-w-md mx-auto mb-12">
+          <Button className="w-full neon-glow" size="lg" onClick={() => router.push("/login")}>Login</Button>
+          <Button variant="outline" className="w-full" size="lg" onClick={() => router.push("/signup")}>Sign up</Button>
         </div>
 
-        <div className="text-center mb-12">
-          <Button
-            onClick={() => router.push("/leaderboard")}
-            variant="outline"
-            className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground neon-glow"
-            size="lg"
-          >
-            <TrendingUp className="w-5 h-5 mr-2" />
-            View Global Leaderboard
-          </Button>
-        </div>
+        
 
         {/* Features Section */}
         <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -171,13 +89,13 @@ export default function HomePage() {
           <Card className="border-accent/30 bg-card/30 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-accent">
-                <Trophy className="w-5 h-5" />
-                Dynamic Leaderboards
+                <Zap className="w-5 h-5" />
+                Play and Learn
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Earn rankings based on WPM, accuracy, and completion time with achievement badges.
+                Improve your command skills while competing in simple, fun challenges.
               </p>
             </CardContent>
           </Card>
