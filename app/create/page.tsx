@@ -6,15 +6,40 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Terminal } from "lucide-react"
+import { Terminal, Loader2 } from "lucide-react"
 
 export default function CreateRoomPage() {
   const router = useRouter()
   const [roomName, setRoomName] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const createRoom = () => {
-    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-    router.push(`/room/${roomCode}`)
+  const createRoom = async () => {
+    setIsLoading(true)
+    setError("")
+    
+    try {
+      const response = await fetch('/api/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: roomName }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        router.push(`/room/${data.room.room_key}`)
+      } else {
+        setError(data.error || "Failed to create room")
+      }
+    } catch (error) {
+      console.error("Create room error:", error)
+      setError("Failed to create room. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -36,6 +61,13 @@ export default function CreateRoomPage() {
               <CardDescription>Minimal setup — no limits, no timers</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Error message */}
+              {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/50 text-destructive rounded-md">
+                  {error}
+                </div>
+              )}
+
               {/* Room Name */}
               <div className="space-y-2">
                 <Label htmlFor="roomName">Arena Name (Optional)</Label>
@@ -45,12 +77,25 @@ export default function CreateRoomPage() {
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   className="bg-input border-border focus:border-primary"
+                  disabled={isLoading}
                 />
               </div>
 
               {/* Create Button */}
-              <Button onClick={createRoom} className="w-full neon-glow" size="lg">
-                Create Arena
+              <Button 
+                onClick={createRoom} 
+                className="w-full neon-glow" 
+                size="lg"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Arena"
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -59,10 +104,11 @@ export default function CreateRoomPage() {
           <div className="text-center mt-6">
             <Button
               variant="ghost"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/admin")}
               className="text-muted-foreground hover:text-foreground"
+              disabled={isLoading}
             >
-              ← Back to Home
+              ← Back to Dashboard
             </Button>
           </div>
         </div>
