@@ -10,14 +10,35 @@ import { Terminal } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [college, setCollege] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const isAdmin = email.toLowerCase().includes("admin")
-    router.push(isAdmin ? "/admin" : "/dashboard")
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        router.push(data.user.isAdmin ? "/admin" : "/dashboard")
+      } else {
+        alert(data.error || "Login failed")
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      alert("Login failed. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -30,23 +51,28 @@ export default function LoginPage() {
         <CardContent>
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input 
+                id="email" 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+                disabled={isLoading}
+                placeholder="Enter your email"
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="college">College</Label>
-              <Input id="college" value={college} onChange={(e) => setCollege(e.target.value)} required />
-            </div>
-            <Button type="submit" className="w-full neon-glow" size="lg">Continue</Button>
+            <Button 
+              type="submit" 
+              className="w-full neon-glow" 
+              size="lg"
+              disabled={isLoading}
+            >
+              {isLoading ? "Logging in..." : "Continue"}
+            </Button>
           </form>
         </CardContent>
       </Card>
     </div>
   )
 }
-
-

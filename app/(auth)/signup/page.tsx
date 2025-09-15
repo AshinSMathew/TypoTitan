@@ -13,11 +13,34 @@ export default function SignupPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [college, setCollege] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const isAdmin = email.toLowerCase().includes("admin")
-    router.push(isAdmin ? "/admin" : "/dashboard")
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, college }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        router.push(data.isAdmin ? "/admin" : "/dashboard")
+      } else {
+        alert(data.error || "Signup failed")
+      }
+    } catch (error) {
+      console.error("Signup error:", error)
+      alert("Signup failed. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -31,22 +54,48 @@ export default function SignupPage() {
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input 
+                id="name" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                required 
+                disabled={isLoading}
+                placeholder="Enter your full name"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input 
+                id="email" 
+                type="email" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+                disabled={isLoading}
+                placeholder="Enter your email address"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="college">College</Label>
-              <Input id="college" value={college} onChange={(e) => setCollege(e.target.value)} required />
+              <Input 
+                id="college" 
+                value={college} 
+                onChange={(e) => setCollege(e.target.value)} 
+                disabled={isLoading}
+                placeholder="Enter your college name (optional)"
+              />
             </div>
-            <Button type="submit" className="w-full neon-glow" size="lg">Create account</Button>
+            <Button 
+              type="submit" 
+              className="w-full neon-glow" 
+              size="lg"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating account..." : "Create account"}
+            </Button>
           </form>
         </CardContent>
       </Card>
     </div>
   )
 }
-
-
