@@ -6,9 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Terminal, Eye, Trophy, LogOut } from "lucide-react"
 
+type User = {
+  id: number
+  name: string
+  email: string
+  college: string
+  isAdmin: boolean
+}
+
 export default function AdminPage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     // Check if user is authenticated and is admin
@@ -23,6 +31,7 @@ export default function AdminPage() {
           router.push('/login')
         }
       } catch (error) {
+        console.error("Auth check error:", error)
         router.push('/login')
       }
     }
