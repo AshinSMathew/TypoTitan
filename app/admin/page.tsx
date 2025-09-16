@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Terminal, Eye, Trophy, LogOut, Plus, Users, Clock } from "lucide-react"
+import { Terminal, Eye, Trophy, LogOut, Plus, Users, Clock,RefreshCw } from "lucide-react"
 
 type User = {
   uid: string
@@ -86,7 +86,14 @@ export default function AdminPage() {
   }
 
   if (!user) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <p>Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
