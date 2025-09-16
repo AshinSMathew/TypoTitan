@@ -43,7 +43,7 @@ export default function JoinRoomPage() {
 
           <Card className="border-accent/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-accent">Arena Access</CardTitle>
+              <CardTitle className="text-main">Arena Access</CardTitle>
               <CardDescription>Join an existing typing challenge</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -65,7 +65,7 @@ export default function JoinRoomPage() {
               {/* Join Button */}
               <Button
                 onClick={joinRoom}
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                className="w-full bg-white text-black hover:bg-black hover:text-white"
                 size="lg"
                 disabled={!roomCode.trim()}
               >

@@ -69,7 +69,7 @@ export default function DashboardPage() {
         <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
           <Card className="border-accent/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-accent">Join Room</CardTitle>
+              <CardTitle className="text-main">Join Room</CardTitle>
             </CardHeader>
             <CardContent>
               <Button className="w-full" size="lg" onClick={() => router.push("/join")}> 
@@ -81,7 +81,7 @@ export default function DashboardPage() {
 
           <Card className="border-secondary/50 bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-secondary">View Results</CardTitle>
+              <CardTitle className="text-main">View Results</CardTitle>
             </CardHeader>
             <CardContent>
               <Button className="w-full" size="lg" variant="outline" onClick={() => router.push("/results")}>

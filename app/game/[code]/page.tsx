@@ -33,42 +33,37 @@ interface Command {
 }
 
 const COMMANDS: Command[] = [
-  { id: "1", text: "ls -la", difficulty: "easy", category: "File Operations" },
-  { id: "2", text: "pwd", difficulty: "easy", category: "Navigation" },
-  { id: "3", text: "whoami", difficulty: "easy", category: "System Info" },
-  { id: "4", text: "ps aux", difficulty: "easy", category: "Process Management" },
-  { id: "5", text: "cat /etc/passwd", difficulty: "easy", category: "File Operations" },
-  { id: "6", text: "netstat -tulpn", difficulty: "medium", category: "Network Analysis" },
-  { id: "7", text: "nmap -sS 192.168.1.1", difficulty: "medium", category: "Network Scanning" },
-  { id: "8", text: 'grep -r "password" /var/log/', difficulty: "medium", category: "Log Analysis" },
-  { id: "9", text: "tcpdump -i eth0 port 80", difficulty: "medium", category: "Network Monitoring" },
-  { id: "10", text: 'find / -name "*.conf" 2>/dev/null', difficulty: "medium", category: "File Search" },
-  {
-    id: "11",
-    text: "openssl enc -aes-256-cbc -salt -in file.txt -out file.enc",
-    difficulty: "hard",
-    category: "Encryption",
-  },
-  { id: "12", text: "iptables -A INPUT -p tcp --dport 22 -j DROP", difficulty: "hard", category: "Firewall" },
-  {
-    id: "13",
-    text: "john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt",
-    difficulty: "hard",
-    category: "Password Cracking",
-  },
-  {
-    id: "14",
-    text: 'sqlmap -u "http://target.com/page.php?id=1" --dbs',
-    difficulty: "hard",
-    category: "SQL Injection",
-  },
-  {
-    id: "15",
-    text: "hydra -l admin -P passwords.txt ssh://192.168.1.100",
-    difficulty: "hard",
-    category: "Brute Force",
-  },
-]
+  // --- EASY (8) ---
+  { id: "1",  text: "ls -la", difficulty: "easy", category: "File Operations" },
+  { id: "2",  text: "pwd", difficulty: "easy", category: "Navigation" },
+  { id: "3",  text: "whoami", difficulty: "easy", category: "System Info" },
+  { id: "4",  text: "cat /etc/passwd", difficulty: "easy", category: "File Operations" },
+  { id: "5",  text: "ps aux", difficulty: "easy", category: "Process Management" },
+  { id: "6",  text: "echo $HOME", difficulty: "easy", category: "Environment" },
+  { id: "7",  text: "date '+%Y-%m-%d %H:%M:%S'", difficulty: "easy", category: "Time/Date" },
+  { id: "8",  text: "uptime", difficulty: "easy", category: "System Info" },
+
+  // --- MEDIUM (9) ---
+  { id: "9",  text: "grep -r 'error' /var/log/", difficulty: "medium", category: "Log Analysis" },
+  { id: "10", text: "find / -name '*.conf' 2>/dev/null", difficulty: "medium", category: "File Search" },
+  { id: "11", text: "netstat -tulpn", difficulty: "medium", category: "Network Analysis" },
+  { id: "12", text: "df -h", difficulty: "medium", category: "Disk Usage" },
+  { id: "13", text: "du -sh * | sort -h", difficulty: "medium", category: "Disk Usage" },
+  { id: "14", text: "history | tail -n 20", difficulty: "medium", category: "History" },
+  { id: "15", text: "wc -l /var/log/syslog", difficulty: "medium", category: "File Operations" },
+  { id: "16", text: "awk '{print $1,$2}' /etc/passwd | head", difficulty: "medium", category: "Text Processing" },
+  { id: "17", text: "chmod -R 755 ~/projects/", difficulty: "medium", category: "Permissions" },
+
+  // --- HARD (8) ---
+  { id: "18", text: "openssl enc -aes-256-cbc -salt -in file.txt -out file.enc", difficulty: "hard", category: "Encryption" },
+  { id: "19", text: "iptables -A INPUT -p tcp --dport 22 -j DROP", difficulty: "hard", category: "Firewall" },
+  { id: "20", text: "ssh -p 2222 user@192.168.1.50", difficulty: "hard", category: "SSH/Remote" },
+  { id: "21", text: "tar -czvf backup.tar.gz /var/www/html/", difficulty: "hard", category: "Archiving" },
+  { id: "22", text: "rsync -avz /home/user/ backup@192.168.1.100:/backups/", difficulty: "hard", category: "Backup" },
+  { id: "23", text: "curl -I https://example.com", difficulty: "hard", category: "Networking" },
+  { id: "24", text: "systemctl status apache2 --no-pager", difficulty: "hard", category: "Services" },
+  { id: "25", text: "journalctl -u ssh --since '1 hour ago'", difficulty: "hard", category: "Log Analysis" }
+];
 
 export default function GamePage() {
   const params = useParams()
@@ -214,7 +209,7 @@ export default function GamePage() {
     }
   }, [])
 
-  const INITIAL_TIME = 10 // TIME
+  const INITIAL_TIME = 10 * 60 // TIME
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
   
@@ -390,7 +385,7 @@ export default function GamePage() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
           <Terminal className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
-          <p>Loading user data...</p>
+          <p>Loading room data...</p>
         </div>
       </div>
     )
@@ -563,7 +558,7 @@ export default function GamePage() {
               </CardHeader>
               <CardContent className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-green-500">Easy (5 commands)</span>
+                  <span className="text-green-500">Easy (8 commands)</span>
                   <span>
                     {currentLevel === "easy"
                       ? "🔄"
@@ -573,11 +568,11 @@ export default function GamePage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-yellow-500">Medium (5 commands)</span>
+                  <span className="text-yellow-500">Medium (9 commands)</span>
                   <span>{currentLevel === "medium" ? "🔄" : currentLevel === "hard" ? "✅" : "⏳"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-red-500">Hard (5 commands)</span>
+                  <span className="text-red-500">Hard (8 commands)</span>
                   <span>{currentLevel === "hard" ? "🔄" : "⏳"}</span>
                 </div>
               </CardContent>

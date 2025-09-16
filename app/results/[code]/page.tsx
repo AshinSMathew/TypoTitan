@@ -343,7 +343,7 @@ export default function ResultsPage() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row justify-center gap-3 md:gap-4 px-4">
           <Button 
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/dashboard")}
             className="flex items-center gap-2"
           >
             <Home className="w-4 h-4" />
