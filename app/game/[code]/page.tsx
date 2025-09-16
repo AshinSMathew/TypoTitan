@@ -214,7 +214,7 @@ export default function GamePage() {
     }
   }, [])
 
-  const INITIAL_TIME = 5 * 60
+  const INITIAL_TIME = 10 // TIME
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
   
