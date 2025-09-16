@@ -1,3 +1,4 @@
+// page.tsx - Updated with admin redirect to spectate page
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -145,7 +146,14 @@ export default function RoomPage() {
           clearInterval(timer)
           // Update room status and navigate
           fetch('/api/room/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
-            .finally(() => router.push(`/game/${code}`))
+            .finally(() => {
+              // Redirect admin to spectate page, others to game page
+              if (isHost) {
+                router.push(`/spectate/${code}`)
+              } else {
+                router.push(`/game/${code}`)
+              }
+            })
           
           return null
         }
@@ -357,33 +365,24 @@ export default function RoomPage() {
                 <CardContent className="pt-4 sm:pt-6 text-center">
                   <p className="text-sm text-blue-400 mb-4">Game is in progress</p>
                   <Button
-                    onClick={() => router.push(`/game/${code}`)}
+                    onClick={() => {
+                      // Redirect admin to spectate page, others to game page
+                      if (isHost) {
+                        router.push(`/spectate/${code}`)
+                      } else {
+                        router.push(`/game/${code}`)
+                      }
+                    }}
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     size="lg"
                   >
-                    Join Game
+                    {isHost ? "Spectate Game" : "Join Game"}
                   </Button>
                 </CardContent>
               </Card>
             )}
           </div>
         </div>
-
-        {/* Terminal Preview */}
-        <Card className="mt-6 sm:mt-8 bg-black/80 border-primary/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-primary font-mono text-xs sm:text-sm">root@arena:~$ preview_commands</CardTitle>
-          </CardHeader>
-          <CardContent className="font-mono text-xs sm:text-sm">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">{"# Sample commands you'll be typing:"}</div>
-              <div className="text-primary break-all">{"sudo netstat -tulpn"}</div>
-              <div className="text-secondary break-all">{"grep -r 'password' /var/log/"}</div>
-              <div className="text-accent break-all">{"ssh -i ~/.ssh/id_rsa user@192.168.1.100"}</div>
-              <div className="text-primary typing-cursor mt-2"></div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

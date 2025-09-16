@@ -24,8 +24,8 @@ export default function HomePage() {
         <header className="text-center mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Terminal className="w-12 h-12 text-primary neon-glow" />
-            <h1 className="text-6xl font-bold font-mono glitch" data-text="CyberType">
-              CyberType
+            <h1 className="text-6xl font-bold font-mono glitch" data-text="TypoTitan">
+              TypoTitan
             </h1>
           </div>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -54,52 +54,7 @@ export default function HomePage() {
           <Button variant="outline" className="w-full" size="lg" onClick={() => router.push("/signup")}>Sign up</Button>
         </div>
 
-        
-
-        {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <Card className="border-secondary/30 bg-card/30 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-secondary">
-                <Terminal className="w-5 h-5" />
-                Command Challenges
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Type real cybersecurity commands, Linux tools, and network utilities across three difficulty levels.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/30 bg-card/30 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Zap className="w-5 h-5" />
-                Real-time Competition
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Compete with up to 8 players simultaneously with live progress tracking and instant feedback.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-accent/30 bg-card/30 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-accent">
-                <Zap className="w-5 h-5" />
-                Play and Learn
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Improve your command skills while competing in simple, fun challenges.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      
 
         {/* Terminal Preview */}
         <div className="mt-12 max-w-4xl mx-auto">
