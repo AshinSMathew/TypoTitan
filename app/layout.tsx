@@ -6,9 +6,9 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "CyberType - Cybersecurity Typing Arena",
+  title: "TypoTitan - Cybersecurity Typing Arena",
   description: "Master cybersecurity commands through competitive typing challenges",
-  generator: "v0.app",
+  generator: "Ashin Sabu Mathew",
 }
 
 export default function RootLayout({

@@ -6,8 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Terminal, Users, Eye, Share2 } from "lucide-react"
+import { Terminal, Eye, Share2, Trophy } from "lucide-react"
+
+interface User{
+  id:string,
+  uid:string,
+  name: string,
+  email: string
+}
 
 interface Player {
   id: string
@@ -16,6 +22,7 @@ interface Player {
   accuracy: number
   progress: number
   isFinished: boolean
+  errors: number
 }
 
 interface Command {
@@ -66,10 +73,8 @@ const COMMANDS: Command[] = [
 export default function GamePage() {
   const params = useParams()
   const router = useRouter()
-  const roomCode = params.code as string
+  const code = params.code as string
   const inputRef = useRef<HTMLInputElement>(null)
-  const [playerName, setPlayerName] = useState("")
-  const [nameSubmitted, setNameSubmitted] = useState(false)
   const [currentLevel, setCurrentLevel] = useState<"easy" | "medium" | "hard">("easy")
   const [currentCommandIndex, setCurrentCommandIndex] = useState(0)
   const [userInput, setUserInput] = useState("")
@@ -80,51 +85,75 @@ export default function GamePage() {
   const [accuracy, setAccuracy] = useState(100)
   const [startTime, setStartTime] = useState<number | null>(null)
   const [levelProgress, setLevelProgress] = useState(0)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showResults, setShowResults] = useState(false)
+  const [totalErrors, setTotalErrors] = useState(0)
 
-  const selfIdRef = useRef<string>(Math.random().toString(36).slice(2))
+  const selfIdRef = useRef<string>("")
   const selfId = selfIdRef.current
 
-  const [players, setPlayers] = useState<Player[]>([
-    { id: "bot1", name: "CyberHacker", wpm: 45, accuracy: 92, progress: 60, isFinished: false },
-    { id: "bot2", name: "TerminalMaster", wpm: 38, accuracy: 88, progress: 45, isFinished: false },
-    { id: "bot3", name: "CodeNinja", wpm: 52, accuracy: 95, progress: 75, isFinished: false },
-  ])
+  const [players, setPlayers] = useState<Player[]>([])
 
   useEffect(() => {
-    if (nameSubmitted) {
-      setPlayers((prev) => {
-        const exists = prev.some((p) => p.id === selfId)
-        if (exists) return prev
-        const me: Player = {
-          id: selfId,
-          name: playerName || "Player",
-          wpm: 0,
-          accuracy: 100,
-          progress: 0,
-          isFinished: false,
+    // Get current user from API
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/me')
+        const data = await response.json()
+        if (data.success) {
+          setCurrentUser(data.user)
+          selfIdRef.current = data.user.uid || data.user.id
+          
+          // Add current user to players list
+          setPlayers(prev => {
+            const exists = prev.some(p => p.id === selfIdRef.current)
+            if (exists) return prev
+            return [...prev, {
+              id: selfIdRef.current,
+              name: data.user.name || "Player",
+              wpm: 0,
+              accuracy: 100,
+              progress: 0,
+              isFinished: false,
+              errors: 0
+            }]
+          })
         }
-        return [...prev, me]
-      })
+      } catch (error) {
+        console.error("Failed to fetch user:", error)
+      }
     }
-  }, [nameSubmitted, playerName, selfId]) 
+
+    fetchUser()
+  }, [])
 
   useEffect(() => {
-    if (!nameSubmitted) return
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === selfId
-          ? {
-              ...p,
-              name: playerName || p.name,
-              wpm,
-              accuracy,
-              progress: Math.max(p.progress, Math.round(levelProgress)),
-              isFinished: gameFinished || p.isFinished,
-            }
-          : p,
-      ),
-    )
-  }, [wpm, accuracy, levelProgress, gameFinished, nameSubmitted, playerName, selfId]) // [8]
+    if (!gameStarted) return
+    
+    // Update player stats in the database periodically
+    const updateStats = async () => {
+      try {
+        await fetch(`/api/game/${code}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            playerId: selfId,
+            wpm,
+            accuracy,
+            errors: totalErrors,
+            isFinished: gameFinished
+          })
+        })
+      } catch (error) {
+        console.error("Failed to update stats:", error)
+      }
+    }
+
+    const interval = setInterval(updateStats, 3000)
+    return () => clearInterval(interval)
+  }, [gameStarted, wpm, accuracy, totalErrors, gameFinished, code, selfId])
 
   const currentCommands = useMemo(
     () => COMMANDS.filter((cmd) => cmd.difficulty === currentLevel),
@@ -134,7 +163,7 @@ export default function GamePage() {
 
   useEffect(() => {
     const disabledCtrlShift = new Set(["I", "J", "C"])
-    const sysCombos = new Set(["U", "S", "P"]) // view-source, save, print
+    const sysCombos = new Set(["U", "S", "P"])
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault()
@@ -183,10 +212,12 @@ export default function GamePage() {
       document.removeEventListener("compositionstart", handleCompositionStart)
       document.removeEventListener("compositionend", handleCompositionEnd)
     }
-  }, []) 
+  }, [])
+
   const INITIAL_TIME = 5 * 60
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
+  
   const formatTime = (totalSec: number) => {
     const m = Math.floor(totalSec / 60)
     const s = totalSec % 60
@@ -196,7 +227,7 @@ export default function GamePage() {
   useEffect(() => {
     if (!gameStarted) return
     setTimerRunning(true)
-  }, [gameStarted]) 
+  }, [gameStarted])
 
   useEffect(() => {
     if (!timerRunning || gameFinished) return
@@ -207,27 +238,22 @@ export default function GamePage() {
           setTimerRunning(false)
           setGameFinished(true)
           setLevelProgress(100)
-          setPlayers((prevPlayers) =>
-            prevPlayers.map((p) =>
-              p.id === selfId ? { ...p, isFinished: true, progress: 100 } : p,
-            ),
-          )
-          router.push(`/results/${roomCode}`)
+          setShowResults(true)
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [timerRunning, gameFinished, router, roomCode, selfId, setPlayers]) 
+  }, [timerRunning, gameFinished])
 
   useLayoutEffect(() => {
     if (gameStarted) inputRef.current?.focus()
-  }, [gameStarted]) 
+  }, [gameStarted])
 
   useLayoutEffect(() => {
     if (gameStarted) inputRef.current?.focus()
-  }, [currentCommandIndex, gameStarted]) 
+  }, [currentCommandIndex, gameStarted])
 
   const startGame = () => {
     setGameStarted(true)
@@ -235,13 +261,14 @@ export default function GamePage() {
     setTimeLeft(INITIAL_TIME)
     setTimerRunning(true)
     setStartTime(Date.now())
-  } 
+    setTotalErrors(0)
+  }
 
   const calculateWPM = () => {
     if (!startTime) return 0
     const timeElapsed = (Date.now() - startTime) / 1000 / 60
     const wordsTyped = userInput.trim().split(" ").filter(Boolean).length
-    return Math.max(0, Math.round(wordsTyped / Math.max(timeElapsed, 1e-6)))
+    return Math.max(0, Math.round(wordsTyped / Math.max(timeElapsed, 0.0167))) // Minimum 1 second
   }
 
   const calculateAccuracy = () => {
@@ -257,8 +284,12 @@ export default function GamePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setUserInput(value)
-    setWpm(calculateWPM())
-    setAccuracy(calculateAccuracy())
+    
+    const newWpm = calculateWPM()
+    const newAccuracy = calculateAccuracy()
+    
+    setWpm(newWpm)
+    setAccuracy(newAccuracy)
 
     const newErrors: number[] = []
     for (let i = 0; i < value.length; i++) {
@@ -290,10 +321,7 @@ export default function GamePage() {
           } else {
             setGameFinished(true)
             setLevelProgress(100)
-            setPlayers((prev) =>
-              prev.map((p) => (p.id === selfId ? { ...p, isFinished: true, progress: 100 } : p)),
-            )
-            router.push(`/results/${roomCode}`)
+            setShowResults(true)
           }
         }
       }, 500)
@@ -313,11 +341,11 @@ export default function GamePage() {
   const renderCommand = () => {
     if (!currentCommand) return null
     return (
-      <div className="font-mono text-lg">
+      <div className="font-mono text-lg md:text-xl break-all">
         {currentCommand.text.split("").map((char, index) => {
           let className = "transition-colors duration-150"
           if (index < userInput.length) {
-            if (userInput[index] === char) className += " text-primary bg-primary/20"
+            if (userInput[index] === char) className += " text-primary"
             else className += " text-destructive bg-destructive/20"
           } else if (index === userInput.length) {
             className += " bg-accent/50 animate-pulse"
@@ -337,25 +365,18 @@ export default function GamePage() {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "easy":
-        return "text-primary"
+        return "text-green-500"
       case "medium":
-        return "text-secondary"
+        return "text-yellow-500"
       case "hard":
-        return "text-accent"
+        return "text-red-500"
       default:
         return "text-foreground"
     }
   }
-  const sortedPlayers = useMemo(() => {
-    return [...players].sort((a, b) => {
-      if (b.progress !== a.progress) return b.progress - a.progress
-      if (b.wpm !== a.wpm) return b.wpm - a.wpm
-      return b.accuracy - a.accuracy
-    })
-  }, [players])
 
   const shareSpectatorLink = async () => {
-    const spectatorUrl = `${window.location.origin}/spectate/${roomCode}`
+    const spectatorUrl = `${window.location.origin}/spectate/${code}`
     try {
       await navigator.clipboard.writeText(spectatorUrl)
       console.log("Spectator link copied to clipboard!")
@@ -363,49 +384,25 @@ export default function GamePage() {
       console.error("Failed to copy spectator link:", err)
     }
   }
-  if (!nameSubmitted) {
+
+  if (!currentUser) {
     return (
-      <div className="min-h-screen bg-background terminal-grid flex items-center justify-center">
-        <Card className="border-primary/50 bg-card/50 backdrop-blur-sm max-w-md w-full">
-          <CardHeader className="text-center">
-            <Terminal className="w-16 h-16 text-primary neon-glow mx-auto mb-4" />
-            <CardTitle className="text-2xl font-mono">Enter Player Name</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <input
-              type="text"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value.slice(0, 20))}
-              placeholder="Your name"
-              className="w-full bg-transparent border rounded px-3 py-2 outline-none text-foreground placeholder-muted-foreground"
-              onCopy={(e) => { e.preventDefault(); e.stopPropagation() }}
-              onPaste={(e) => { e.preventDefault(); e.stopPropagation() }}
-              onCut={(e) => { e.preventDefault(); e.stopPropagation() }}
-              onDrop={blockSelectDragDrop}
-              onDragStart={blockSelectDragDrop}
-              onSelect={blockSelectDragDrop}
-            />
-            <Button
-              onClick={() => setNameSubmitted(true)}
-              className="w-full neon-glow"
-              size="lg"
-              disabled={!playerName.trim()}
-            >
-              Continue
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <Terminal className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
+          <p>Loading user data...</p>
+        </div>
       </div>
     )
   }
 
   if (!gameStarted) {
     return (
-      <div className="min-h-screen bg-background terminal-grid flex items-center justify-center">
-        <Card className="border-primary/50 bg-card/50 backdrop-blur-sm max-w-md w/full">
+      <div className="min-h-screen bg-background terminal-grid flex items-center justify-center p-4">
+        <Card className="border-primary/50 bg-card/50 backdrop-blur-sm max-w-md w-full">
           <CardHeader className="text-center">
             <Terminal className="w-16 h-16 text-primary neon-glow mx-auto mb-4" />
-            <CardTitle className="text-2xl font-mono">Ready to Hack, {playerName}?</CardTitle>
+            <CardTitle className="text-2xl font-mono">Ready to Hack, {currentUser.name}?</CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
@@ -420,33 +417,77 @@ export default function GamePage() {
     )
   }
 
+  if (showResults) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="border-primary/50 bg-card/50 backdrop-blur-sm max-w-md w-full">
+          <CardHeader className="text-center">
+            <Terminal className="w-16 h-16 text-primary neon-glow mx-auto mb-4" />
+            <CardTitle className="text-2xl font-mono">Challenge Complete!</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-primary/10 p-4 rounded-lg">
+                <div className="text-3xl font-bold text-primary">{wpm}</div>
+                <div className="text-sm text-muted-foreground">WPM</div>
+              </div>
+              <div className="bg-secondary/10 p-4 rounded-lg">
+                <div className="text-3xl font-bold text-secondary">{accuracy}%</div>
+                <div className="text-sm text-muted-foreground">Accuracy</div>
+              </div>
+              <div className="bg-accent/10 p-4 rounded-lg">
+                <div className="text-3xl font-bold text-accent">{totalErrors}</div>
+                <div className="text-sm text-muted-foreground">Errors</div>
+              </div>
+              <div className="bg-green-500/10 p-4 rounded-lg">
+                <div className="text-3xl font-bold text-green-500">
+                  {currentLevel === "hard" ? "100" : Math.round(levelProgress)}%
+                </div>
+                <div className="text-sm text-muted-foreground">Progress</div>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={() => router.push(`/results/${code}`)}
+              className="w-full neon-glow"
+              size="lg"
+            >
+              <Trophy className="w-5 h-5 mr-2" />
+              View Leaderboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background terminal-grid">
       <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <Terminal className="w-8 h-8 text-primary neon-glow" />
             <div>
               <h1 className="text-2xl font-bold font-mono">Cyber Arena</h1>
-              <p className="text-sm text-muted-foreground">Room: {roomCode}</p>
+              <p className="text-sm text-muted-foreground">Room: {code}</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4">
             <Badge variant="outline" className={`border-current ${getDifficultyColor(currentLevel)}`}>
               {currentLevel.toUpperCase()} LEVEL
             </Badge>
             <div className="flex items-center gap-2 text-muted-foreground">
-              Time left: <span className="font-mono text-primary">{formatTime(timeLeft)}</span>
+              Time: <span className="font-mono text-primary">{formatTime(timeLeft)}</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={shareSpectatorLink}
-              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent"
+              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent text-xs"
             >
-              <Share2 className="w-4 h-4 mr-2" />
-              Share Spectator Link
+              <Share2 className="w-3 h-3 mr-1" />
+              Share
             </Button>
           </div>
         </div>
@@ -456,18 +497,18 @@ export default function GamePage() {
           <div className="lg:col-span-3 space-y-6">
             {/* Command Display */}
             <Card className="border-primary/50 bg-black/80">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <CardTitle className="text-primary font-mono text-sm">
                     root@cybertype:~$ {currentCommand?.category}
                   </CardTitle>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="self-start sm:self-auto">
                     {currentCommandIndex + 1} / {currentCommands.length}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="mb-4">{renderCommand()}</div>
+                <div className="mb-4 min-h-[4rem]">{renderCommand()}</div>
                 <input
                   ref={inputRef}
                   type="text"
@@ -514,45 +555,15 @@ export default function GamePage() {
             </Card>
           </div>
 
-          {/* Players Sidebar */}
+          {/* Challenge Overview Sidebar */}
           <div className="space-y-4">
-            <Card className="border-secondary/50 bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-secondary text-sm">
-                  <Users className="w-4 h-4" />
-                  Live Rankings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {sortedPlayers.map((player, index) => (
-                  <div key={player.id} className="flex items-center gap-3 p-2 rounded border border-border">
-                    <div className="text-sm font-bold text-primary">#{index + 1}</div>
-                    <Avatar className="w-8 h-8 border border-primary">
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {player.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {player.name}
-                        {player.id === selfId ? " (You)" : ""}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {player.wpm} WPM • {player.accuracy}%
-                      </div>
-                      <Progress value={player.progress} className="h-1 mt-1" />
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
             <Card className="border-primary/30 bg-card/30 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-primary text-sm">Challenge Overview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-primary">Easy (5 commands)</span>
+                  <span className="text-green-500">Easy (5 commands)</span>
                   <span>
                     {currentLevel === "easy"
                       ? "🔄"
@@ -562,11 +573,11 @@ export default function GamePage() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-secondary">Medium (5 commands)</span>
+                  <span className="text-yellow-500">Medium (5 commands)</span>
                   <span>{currentLevel === "medium" ? "🔄" : currentLevel === "hard" ? "✅" : "⏳"}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-accent">Hard (5 commands)</span>
+                  <span className="text-red-500">Hard (5 commands)</span>
                   <span>{currentLevel === "hard" ? "🔄" : "⏳"}</span>
                 </div>
               </CardContent>
@@ -581,7 +592,7 @@ export default function GamePage() {
               </CardHeader>
               <CardContent>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-accent">3</div>
+                  <div className="text-2xl font-bold text-accent">0</div>
                   <div className="text-xs text-muted-foreground">Watching</div>
                 </div>
               </CardContent>
@@ -589,7 +600,6 @@ export default function GamePage() {
           </div>
         </div>
       </div>
-      {/* Chat removed */}
     </div>
   )
 }
