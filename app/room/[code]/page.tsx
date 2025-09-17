@@ -1,4 +1,3 @@
-// page.tsx - Updated with admin redirect to spectate page
 "use client"
 
 import { useState, useEffect, useRef } from "react"

@@ -5,7 +5,6 @@ import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-
 import { LoadingScreen } from "@/components/game/LoadingScreen"
 import { StartScreen } from "@/components/game/StartScreen"
 import { ResultsScreen } from "@/components/game/ResultScreen"
@@ -13,7 +12,6 @@ import { CommandDisplay } from "@/components/game/CommandDisplay"
 import { GameHeader } from "@/components/game/GameHeader"
 import { ProgressStats } from "@/components/game/ProgressStats"
 import { PlayerStats } from "@/components/game/PlayerStats"
-
 
 import type { User, Player, Command } from "@/lib/types"
 
@@ -60,7 +58,7 @@ export default function GamePage() {
   const [gameFinished, setGameFinished] = useState(false)
   const [errors, setErrors] = useState<number[]>([])
   const [wpm, setWpm] = useState(0)
-  const [accuracy, setAccuracy] = useState(100)
+  const [accuracy, setAccuracy] = useState(0) // Initialize as 0, will be calculated at the end
   const [startTime, setStartTime] = useState<number | null>(null)
   const [progress, setProgress] = useState(0)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -74,6 +72,11 @@ export default function GamePage() {
   const selfId = selfIdRef.current
 
   const [players, setPlayers] = useState<Player[]>([])
+
+  // Calculate total characters in all commands (including spaces)
+  const totalCharacters = useMemo(() => {
+    return words.join(' ').length
+  }, [words])
 
   useEffect(() => {
     // Get current user from API
@@ -93,7 +96,7 @@ export default function GamePage() {
               id: selfIdRef.current,
               name: data.user.name || "Player",
               wpm: 0,
-              accuracy: 100,
+              accuracy: 0,
               progress: 0,
               isFinished: false,
               errors: 0
@@ -197,7 +200,7 @@ export default function GamePage() {
     }
   }, [])
 
-  const INITIAL_TIME = 15 * 60 // 5 minutes in seconds
+  const INITIAL_TIME = 15 * 60 // 15 minutes in seconds
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
 
@@ -215,6 +218,11 @@ export default function GamePage() {
           setTimerRunning(false)
           setGameFinished(true)
           setProgress(100)
+          
+          // Calculate final accuracy when time runs out
+          const finalAccuracy = Math.round(((totalCharacters - totalErrors) / totalCharacters) * 100)
+          setAccuracy(finalAccuracy)
+          
           setShowResults(true)
           return 0
         }
@@ -222,7 +230,7 @@ export default function GamePage() {
       })
     }, 1000)
     return () => clearInterval(id)
-  }, [timerRunning, gameFinished])
+  }, [timerRunning, gameFinished, totalCharacters, totalErrors])
 
   useLayoutEffect(() => {
     if (gameStarted) inputRef.current?.focus()
@@ -244,6 +252,7 @@ export default function GamePage() {
     setTypedHistory([])
     setProgress(0)
     setPersistentErrorIndices([])
+    setAccuracy(0) // Reset accuracy at start
   }
 
   const calculateWPM = () => {
@@ -255,28 +264,12 @@ export default function GamePage() {
     return Math.max(0, Math.round(wordsTyped / Math.max(timeElapsed, 0.0167))) // Minimum 1 second
   }
 
-  const calculateAccuracy = () => {
-    if (!currentCommand || userInput.length === 0) return 100
-    
-    let correctChars = 0
-    const minLength = Math.min(userInput.length, currentCommand.length)
-    
-    for (let i = 0; i < minLength; i++) {
-      if (userInput[i] === currentCommand[i]) correctChars++
-    }
-    
-    return Math.round((correctChars / currentCommand.length) * 100)
-  }
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setUserInput(value)
     
     const newWpm = calculateWPM()
-    const newAccuracy = calculateAccuracy()
-    
     setWpm(newWpm)
-    setAccuracy(newAccuracy)
 
     // Track current errors
     const newErrors: number[] = []
@@ -308,6 +301,11 @@ export default function GamePage() {
         } else {
           setGameFinished(true)
           setProgress(100)
+          
+          // Calculate final accuracy when all commands are completed
+          const finalAccuracy = Math.round(((totalCharacters - totalErrors) / totalCharacters) * 100)
+          setAccuracy(finalAccuracy)
+          
           setShowResults(true)
         }
       }, 0)
@@ -383,7 +381,7 @@ export default function GamePage() {
               </CardContent>
             </Card>
 
-            <ProgressStats progress={progress} wpm={wpm} accuracy={accuracy} errors={totalErrors} />
+            <ProgressStats progress={progress} wpm={wpm} errors={totalErrors} />
           </div>
 
           {/* Player Stats Sidebar */}

@@ -13,7 +13,6 @@ interface Player {
   id: string
   name: string
   wpm: number
-  accuracy: number
   progress: number
   isFinished: boolean
   currentCommand: string
@@ -174,10 +173,6 @@ export default function SpectatePage() {
                       <div className="text-primary font-bold text-lg md:text-xl">{focusedPlayer.wpm}</div>
                       <div className="text-xs text-muted-foreground">WPM</div>
                     </div>
-                    <div className="bg-secondary/10 p-2 rounded">
-                      <div className="text-secondary font-bold text-lg md:text-xl">{focusedPlayer.accuracy}%</div>
-                      <div className="text-xs text-muted-foreground">Accuracy</div>
-                    </div>
                     <div className="bg-accent/10 p-2 rounded">
                       <div className="text-accent font-bold text-lg md:text-xl">{Math.round(focusedPlayer.progress)}%</div>
                       <div className="text-xs text-muted-foreground">Progress</div>
@@ -244,7 +239,7 @@ export default function SpectatePage() {
                               )}
                             </div>
                             <div className="text-xs md:text-sm text-muted-foreground mb-2">
-                              {player.wpm} WPM • {player.accuracy}% • {player.errors} errors
+                              {player.wpm} WPM • {player.errors} errors
                             </div>
                             <Progress value={player.progress} className="h-2" />
                           </div>
@@ -273,12 +268,6 @@ export default function SpectatePage() {
                   <span>Avg WPM:</span>
                   <span className="font-mono">
                     {players.length > 0 ? Math.round(players.reduce((acc, p) => acc + p.wpm, 0) / players.length) : 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Avg Accuracy:</span>
-                  <span className="font-mono">
-                    {players.length > 0 ? Math.round(players.reduce((acc, p) => acc + p.accuracy, 0) / players.length) : 0}%
                   </span>
                 </div>
                 <div className="flex justify-between">

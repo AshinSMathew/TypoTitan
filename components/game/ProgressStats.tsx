@@ -1,10 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
-export const ProgressStats = ({ progress, wpm, accuracy, errors }: { 
+export const ProgressStats = ({ progress, wpm, errors }: { 
   progress: number, 
   wpm: number, 
-  accuracy: number, 
   errors: number 
 }) => {
   return (
@@ -20,10 +19,6 @@ export const ProgressStats = ({ progress, wpm, accuracy, errors }: {
             <div>
               <div className="text-2xl font-bold text-primary">{wpm}</div>
               <div className="text-xs text-muted-foreground">WPM</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-secondary">{accuracy}%</div>
-              <div className="text-xs text-muted-foreground">Accuracy</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-accent">{errors}</div>
