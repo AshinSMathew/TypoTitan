@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Terminal, Eye, Share2, Trophy } from "lucide-react"
+import { Terminal, Trophy } from "lucide-react"
 
 interface User{
   id:string,
@@ -209,7 +209,7 @@ export default function GamePage() {
     }
   }, [])
 
-  const INITIAL_TIME = 10 * 60 // TIME
+  const INITIAL_TIME = 5 // TIME
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
   
@@ -370,16 +370,6 @@ export default function GamePage() {
     }
   }
 
-  const shareSpectatorLink = async () => {
-    const spectatorUrl = `${window.location.origin}/spectate/${code}`
-    try {
-      await navigator.clipboard.writeText(spectatorUrl)
-      console.log("Spectator link copied to clipboard!")
-    } catch (err) {
-      console.error("Failed to copy spectator link:", err)
-    }
-  }
-
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -401,7 +391,7 @@ export default function GamePage() {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              {"You'll face 15 cybersecurity commands across 3 difficulty levels. Type as fast and accurately as possible!"}
+              {"You'll face cybersecurity commands across 3 difficulty levels. Type as fast and accurately as possible!"}
             </p>
             <Button onClick={startGame} className="w-full neon-glow" size="lg">
               Start Challenge
@@ -475,15 +465,6 @@ export default function GamePage() {
             <div className="flex items-center gap-2 text-muted-foreground">
               Time: <span className="font-mono text-primary">{formatTime(timeLeft)}</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={shareSpectatorLink}
-              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent text-xs"
-            >
-              <Share2 className="w-3 h-3 mr-1" />
-              Share
-            </Button>
           </div>
         </div>
 
@@ -574,21 +555,6 @@ export default function GamePage() {
                 <div className="flex justify-between">
                   <span className="text-red-500">Hard (8 commands)</span>
                   <span>{currentLevel === "hard" ? "🔄" : "⏳"}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-accent/30 bg-card/30 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-accent text-sm">
-                  <Eye className="w-4 h-4" />
-                  Spectators
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-accent">0</div>
-                  <div className="text-xs text-muted-foreground">Watching</div>
                 </div>
               </CardContent>
             </Card>

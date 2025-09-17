@@ -208,35 +208,11 @@ export default function ResultsPage() {
         {results.length >= 3 && (
           <div className="max-w-4xl mx-auto mb-8 md:mb-12">
             <div className="grid md:grid-cols-3 gap-4 items-end">
-              {/* 2nd Place */}
-              {results[1] && (
-                <Card className={`${getRankColor(2)} backdrop-blur-sm order-1 md:order-1`}>
-                  <CardContent className="pt-6 text-center">
-                    <div className="mb-4">{getRankIcon(2)}</div>
-                    <Avatar className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 border-2 border-gray-400">
-                      <AvatarFallback className="bg-gray-400 text-white text-sm md:text-lg">
-                        {results[1].name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <h3 className="font-bold text-base md:text-lg">{results[1].name}</h3>
-                    <div className="text-xs md:text-sm text-muted-foreground space-y-1">
-                      <div>{results[1].wpm} WPM</div>
-                      <div>{results[1].accuracy}% Accuracy</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* 1st Place */}
               {results[0] && (
                 <Card className={`${getRankColor(1)} backdrop-blur-sm order-2 md:order-2 md:scale-110`}>
                   <CardContent className="pt-6 text-center">
-                    <div className="mb-4 neon-glow">{getRankIcon(1)}</div>
-                    <Avatar className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 border-4 border-yellow-400 neon-glow">
-                      <AvatarFallback className="bg-yellow-400 text-black text-base md:text-xl font-bold">
-                        {results[0].name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
                     <h3 className="font-bold text-lg md:text-xl text-yellow-400">{results[0].name}</h3>
                     <Badge className="mb-2 bg-yellow-400 text-black text-xs">CHAMPION</Badge>
                     <div className="text-xs md:text-sm text-muted-foreground space-y-1">
@@ -247,16 +223,23 @@ export default function ResultsPage() {
                 </Card>
               )}
 
+              {/* 2nd Place */}
+              {results[1] && (
+                <Card className={`${getRankColor(2)} backdrop-blur-sm order-1 md:order-1`}>
+                  <CardContent className="pt-6 text-center">
+                    <h3 className="font-bold text-base md:text-lg">{results[1].name}</h3>
+                    <div className="text-xs md:text-sm text-muted-foreground space-y-1">
+                      <div>{results[1].wpm} WPM</div>
+                      <div>{results[1].accuracy}% Accuracy</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* 3rd Place */}
               {results[2] && (
                 <Card className={`${getRankColor(3)} backdrop-blur-sm order-3 md:order-3`}>
                   <CardContent className="pt-6 text-center">
-                    <div className="mb-4">{getRankIcon(3)}</div>
-                    <Avatar className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 border-2 border-amber-600">
-                      <AvatarFallback className="bg-amber-600 text-white text-sm md:text-lg">
-                        {results[2].name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
                     <h3 className="font-bold text-base md:text-lg">{results[2].name}</h3>
                     <div className="text-xs md:text-sm text-muted-foreground space-y-1">
                       <div>{results[2].wpm} WPM</div>

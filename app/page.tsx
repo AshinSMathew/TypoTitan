@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Terminal, Users, Zap, Shield } from "lucide-react"
+import { Terminal } from "lucide-react"
 
 export default function HomePage() {
   const router = useRouter()
@@ -32,20 +31,6 @@ export default function HomePage() {
             Master cybersecurity commands through competitive typing challenges. Test your skills in real-time
             multiplayer battles.
           </p>
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <Badge variant="secondary" className="neon-glow">
-              <Shield className="w-4 h-4 mr-1" />
-              Cybersecurity Focus
-            </Badge>
-            <Badge variant="outline" className="border-accent text-accent">
-              <Users className="w-4 h-4 mr-1" />
-              Multiplayer
-            </Badge>
-            <Badge variant="outline" className="border-primary text-primary">
-              <Zap className="w-4 h-4 mr-1" />
-              Real-time
-            </Badge>
-          </div>
         </header>
 
         {/* Main Actions */}

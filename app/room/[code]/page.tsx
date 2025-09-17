@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Terminal, Users, Crown, Play, Copy, Check, Share2 } from "lucide-react"
+import { Terminal, Users, Crown, Play, Copy, Check } from "lucide-react"
 
 interface Player {
   id: string
@@ -127,17 +127,6 @@ export default function RoomPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const shareSpectatorLink = async () => {
-    const spectatorUrl = `${window.location.origin}/spectate/${code}`
-    try {
-      await navigator.clipboard.writeText(spectatorUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("Failed to copy spectator link:", err)
-    }
-  }
-
   const startGame = () => {
     setCountdown(5)
     const timer = setInterval(() => {
@@ -207,21 +196,11 @@ export default function RoomPage() {
             <Button
               variant="outline"
               onClick={copyRoomCode}
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent text-xs sm:text-sm"
+              className="border-primary text-primary hover:bg-primary hover:text-white-foreground bg-transparent text-xs sm:text-sm"
               size="sm"
             >
               {copied ? <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> : <Copy className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />}
               <span className="truncate">{code}</span>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={shareSpectatorLink}
-              className="border-accent text-accent hover:bg-accent hover:text-accent-foreground bg-transparent text-xs sm:text-sm"
-              size="sm"
-            >
-              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-              <span className="hidden sm:inline">Share Spectator Link</span>
-              <span className="sm:hidden">Spectator</span>
             </Button>
           </div>
         </div>
@@ -277,9 +256,9 @@ export default function RoomPage() {
           {/* Game Controls Sidebar */}
           <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
             {/* Room Info */}
-            <Card className="border-accent/50 bg-card/50 backdrop-blur-sm">
+            <Card className="border-primary bg-card/50 backdrop-blur-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-accent text-lg">Room Info</CardTitle>
+                <CardTitle className="text-primary text-lg">Room Info</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -301,22 +280,6 @@ export default function RoomPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Players:</span>
                   <span className="text-sm font-mono">{players.length}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Debug Info - Remove in production */}
-            <Card className="border-yellow-500/50 bg-yellow-500/5 backdrop-blur-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-yellow-500 text-sm">Debug Info</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="text-xs space-y-1">
-                  <div>Is Host: <span className="font-mono">{isHost ? 'true' : 'false'}</span></div>
-                  <div>User in Room: <span className="font-mono">{isUserInRoom ? 'true' : 'false'}</span></div>
-                  <div>Room Status: <span className="font-mono">{room.status}</span></div>
-                  <div>Current User ID: <span className="font-mono">{currentUser?.id || currentUser?.uid || 'null'}</span></div>
-                  <div>Room Created By: <span className="font-mono">{room.created_by}</span></div>
                 </div>
               </CardContent>
             </Card>
