@@ -35,7 +35,7 @@ export default function SpectatePage() {
   const [gameState, setGameState] = useState<GameState>({
     currentLevel: "easy",
     isActive: false,
-    timeLeft: 300
+    timeLeft: 9000
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -64,19 +64,6 @@ export default function SpectatePage() {
     } finally {
       setLoading(false)
       setRefreshing(false)
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "text-green-500"
-      case "medium":
-        return "text-yellow-500"
-      case "hard":
-        return "text-red-500"
-      default:
-        return "text-foreground"
     }
   }
 
@@ -114,16 +101,13 @@ export default function SpectatePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <Eye className="w-6 h-6 md:w-8 md:h-8 text-accent neon-glow" />
+            <Eye className="w-6 h-6 md:w-8 md:h-8 text-main neon-glow" />
             <div>
               <h1 className="text-xl md:text-2xl font-bold font-mono">Spectator Mode</h1>
               <p className="text-sm text-muted-foreground">Watching Arena: {roomCode}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Badge variant="outline" className={`border-current ${getDifficultyColor(gameState.currentLevel)}`}>
-              {gameState.currentLevel.toUpperCase()} LEVEL
-            </Badge>
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               Time: <span className="font-mono">{formatTime(gameState.timeLeft)}</span>
             </div>
@@ -137,11 +121,12 @@ export default function SpectatePage() {
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push("/admin")}
-              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              className="border-primary text-primary hover:bg-primary hover:text-white"
             >
               <Home className="w-4 h-4" />
             </Button>
@@ -324,6 +309,14 @@ export default function SpectatePage() {
                 </div>
               </CardContent>
             </Card>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => router.push(`/results/${roomCode}`)}
+              className="border-primary/30 bg-card/30 backdrop-blur-sm w-full h-10"
+            >
+              Publish Result
+            </Button>
           </div>
         </div>
       </div>

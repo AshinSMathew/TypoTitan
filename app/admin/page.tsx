@@ -172,6 +172,14 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         variant="outline"
+                        onClick={() => router.push(`/room/${room.room_key}`)}
+                        className="flex items-center gap-2"
+                      >
+                        View Room
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         onClick={() => router.push(`/spectate/${room.room_key}`)}
                         className="flex items-center gap-2"
                       >
