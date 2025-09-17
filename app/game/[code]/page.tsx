@@ -70,7 +70,6 @@ export default function GamePage() {
   const router = useRouter()
   const code = params.code as string
   const inputRef = useRef<HTMLInputElement>(null)
-  const [currentLevel, setCurrentLevel] = useState<"easy" | "medium" | "hard">("easy")
   const [currentCommandIndex, setCurrentCommandIndex] = useState(0)
   const [userInput, setUserInput] = useState("")
   const [gameStarted, setGameStarted] = useState(false)
@@ -79,10 +78,12 @@ export default function GamePage() {
   const [wpm, setWpm] = useState(0)
   const [accuracy, setAccuracy] = useState(100)
   const [startTime, setStartTime] = useState<number | null>(null)
-  const [levelProgress, setLevelProgress] = useState(0)
+  const [progress, setProgress] = useState(0)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [showResults, setShowResults] = useState(false)
   const [totalErrors, setTotalErrors] = useState(0)
+  const [typedHistory, setTypedHistory] = useState<string[]>([])
+  const [words, setWords] = useState<string[]>([])
 
   const selfIdRef = useRef<string>("")
   const selfId = selfIdRef.current
@@ -150,11 +151,13 @@ export default function GamePage() {
     return () => clearInterval(interval)
   }, [gameStarted, wpm, accuracy, totalErrors, gameFinished, code, selfId])
 
-  const currentCommands = useMemo(
-    () => COMMANDS.filter((cmd) => cmd.difficulty === currentLevel),
-    [currentLevel],
-  )
-  const currentCommand = currentCommands[currentCommandIndex]
+  // Prepare all commands as a single paragraph
+  useEffect(() => {
+    const allCommands = COMMANDS.map(cmd => cmd.text)
+    setWords(allCommands)
+  }, [])
+
+  const currentCommand = useMemo(() => words[currentCommandIndex], [words, currentCommandIndex])
 
   useEffect(() => {
     const disabledCtrlShift = new Set(["I", "J", "C"])
@@ -209,7 +212,7 @@ export default function GamePage() {
     }
   }, [])
 
-  const INITIAL_TIME = 5 // TIME
+  const INITIAL_TIME = 300 // 5 minutes in seconds
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
   
@@ -232,7 +235,7 @@ export default function GamePage() {
           clearInterval(id)
           setTimerRunning(false)
           setGameFinished(true)
-          setLevelProgress(100)
+          setProgress(100)
           setShowResults(true)
           return 0
         }
@@ -257,23 +260,32 @@ export default function GamePage() {
     setTimerRunning(true)
     setStartTime(Date.now())
     setTotalErrors(0)
+    setCurrentCommandIndex(0)
+    setUserInput("")
+    setTypedHistory([])
+    setProgress(0)
   }
 
   const calculateWPM = () => {
     if (!startTime) return 0
     const timeElapsed = (Date.now() - startTime) / 1000 / 60
-    const wordsTyped = userInput.trim().split(" ").filter(Boolean).length
+    const charactersTyped = typedHistory.join(' ').length + userInput.length
+    // Assuming average word length is 5 characters
+    const wordsTyped = charactersTyped / 5
     return Math.max(0, Math.round(wordsTyped / Math.max(timeElapsed, 0.0167))) // Minimum 1 second
   }
 
   const calculateAccuracy = () => {
     if (!currentCommand || userInput.length === 0) return 100
-    let correct = 0
-    const minLength = Math.min(userInput.length, currentCommand.text.length)
+    
+    let correctChars = 0
+    const minLength = Math.min(userInput.length, currentCommand.length)
+    
     for (let i = 0; i < minLength; i++) {
-      if (userInput[i] === currentCommand.text[i]) correct++
+      if (userInput[i] === currentCommand[i]) correctChars++
     }
-    return Math.round((correct / currentCommand.text.length) * 100)
+    
+    return Math.round((correctChars / currentCommand.length) * 100)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,38 +300,27 @@ export default function GamePage() {
 
     const newErrors: number[] = []
     for (let i = 0; i < value.length; i++) {
-      if (value[i] !== currentCommand.text[i]) newErrors.push(i)
+      if (value[i] !== currentCommand[i]) newErrors.push(i)
     }
     setErrors(newErrors)
 
-    if (value === currentCommand.text) {
+    // Move to next command when space is pressed and current command is completed
+    if (value.endsWith(' ') && value.trim() === currentCommand) {
       setTimeout(() => {
-        if (currentCommandIndex < currentCommands.length - 1) {
+        setTypedHistory([...typedHistory, value.trim()])
+        setUserInput("")
+        setErrors([])
+        
+        if (currentCommandIndex < words.length - 1) {
           const nextIndex = currentCommandIndex + 1
           setCurrentCommandIndex(nextIndex)
-          setUserInput("")
-          setErrors([])
-          setLevelProgress((nextIndex / currentCommands.length) * 100)
+          setProgress((nextIndex / words.length) * 100)
         } else {
-          if (currentLevel === "easy") {
-            setCurrentLevel("medium")
-            setCurrentCommandIndex(0)
-            setUserInput("")
-            setErrors([])
-            setLevelProgress(0)
-          } else if (currentLevel === "medium") {
-            setCurrentLevel("hard")
-            setCurrentCommandIndex(0)
-            setUserInput("")
-            setErrors([])
-            setLevelProgress(0)
-          } else {
-            setGameFinished(true)
-            setLevelProgress(100)
-            setShowResults(true)
-          }
+          setGameFinished(true)
+          setProgress(100)
+          setShowResults(true)
         }
-      }, 500)
+      }, 0)
     }
   }
 
@@ -333,41 +334,40 @@ export default function GamePage() {
     e.stopPropagation()
   }
 
-  const renderCommand = () => {
-    if (!currentCommand) return null
+  const renderWords = () => {
     return (
-      <div className="font-mono text-lg md:text-xl break-all">
-        {currentCommand.text.split("").map((char, index) => {
-          let className = "transition-colors duration-150"
-          if (index < userInput.length) {
-            if (userInput[index] === char) className += " text-primary"
-            else className += " text-destructive bg-destructive/20"
-          } else if (index === userInput.length) {
-            className += " bg-accent/50 animate-pulse"
-          } else {
-            className += " text-muted-foreground"
-          }
-          return (
-            <span key={index} className={className}>
-              {char}
-            </span>
-          )
-        })}
+      <div className="font-mono text-lg md:text-xl leading-loose break-all bg-black/80 p-6 rounded-lg">
+        {/* Previously typed commands */}
+        <div className="text-muted-foreground opacity-60 mb-4">
+          {typedHistory.join(' ')}
+        </div>
+        
+        {/* Current command being typed */}
+        <div className="mb-4">
+          {currentCommand?.split("").map((char, index) => {
+            let className = "transition-colors duration-150"
+            if (index < userInput.length) {
+              if (userInput[index] === char) className += " text-primary"
+              else className += " text-destructive bg-destructive/20"
+            } else if (index === userInput.length) {
+              className += " bg-accent/50 animate-pulse"
+            } else {
+              className += " text-muted-foreground"
+            }
+            return (
+              <span key={index} className={className}>
+                {char}
+              </span>
+            )
+          })}
+        </div>
+        
+        {/* Upcoming commands */}
+        <div className="text-muted-foreground opacity-60">
+          {words.slice(currentCommandIndex + 1, currentCommandIndex + 3).join(' ')}
+        </div>
       </div>
     )
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "text-green-500"
-      case "medium":
-        return "text-yellow-500"
-      case "hard":
-        return "text-red-500"
-      default:
-        return "text-foreground"
-    }
   }
 
   if (!currentUser) {
@@ -391,7 +391,7 @@ export default function GamePage() {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              {"You'll face cybersecurity commands across 3 difficulty levels. Type as fast and accurately as possible!"}
+              {"You'll face cybersecurity commands. Type as fast and accurately as possible!"}
             </p>
             <Button onClick={startGame} className="w-full neon-glow" size="lg">
               Start Challenge
@@ -426,7 +426,7 @@ export default function GamePage() {
               </div>
               <div className="bg-green-500/10 p-4 rounded-lg">
                 <div className="text-3xl font-bold text-green-500">
-                  {currentLevel === "hard" ? "100" : Math.round(levelProgress)}%
+                  {Math.round(progress)}%
                 </div>
                 <div className="text-sm text-muted-foreground">Progress</div>
               </div>
@@ -459,9 +459,6 @@ export default function GamePage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Badge variant="outline" className={`border-current ${getDifficultyColor(currentLevel)}`}>
-              {currentLevel.toUpperCase()} LEVEL
-            </Badge>
             <div className="flex items-center gap-2 text-muted-foreground">
               Time: <span className="font-mono text-primary">{formatTime(timeLeft)}</span>
             </div>
@@ -476,22 +473,22 @@ export default function GamePage() {
               <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <CardTitle className="text-primary font-mono text-sm">
-                    root@cybertype:~$ {currentCommand?.category}
+                    root@cybertype:~$
                   </CardTitle>
                   <Badge variant="secondary" className="self-start sm:self-auto">
-                    {currentCommandIndex + 1} / {currentCommands.length}
+                    {currentCommandIndex + 1} / {words.length}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 min-h-[4rem]">{renderCommand()}</div>
+                {renderWords()}
                 <input
                   ref={inputRef}
                   type="text"
                   value={userInput}
                   onChange={handleInputChange}
-                  className="w-full bg-transparent border-none outline-none text-lg font-mono text-foreground placeholder-muted-foreground"
-                  placeholder="Type the command here..."
+                  className="w-full mt-4 bg-transparent border-none outline-none text-lg font-mono text-foreground placeholder-muted-foreground"
+                  placeholder="Type the commands here..."
                   disabled={gameFinished}
                   autoFocus
                   onCopy={blockClipboardEvent}
@@ -508,10 +505,10 @@ export default function GamePage() {
               <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div className="flex justify-between text-sm">
-                    <span>Level Progress</span>
-                    <span>{Math.round(levelProgress)}%</span>
+                    <span>Progress</span>
+                    <span>{Math.round(progress)}%</span>
                   </div>
-                  <Progress value={levelProgress} className="h-2" />
+                  <Progress value={progress} className="h-2" />
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
                       <div className="text-2xl font-bold text-primary">{wpm}</div>
@@ -531,30 +528,24 @@ export default function GamePage() {
             </Card>
           </div>
 
-          {/* Challenge Overview Sidebar */}
+          {/* Player Stats Sidebar */}
           <div className="space-y-4">
             <Card className="border-primary/30 bg-card/30 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-primary text-sm">Challenge Overview</CardTitle>
+                <CardTitle className="text-primary text-sm">Your Stats</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-green-500">Easy (8 commands)</span>
-                  <span>
-                    {currentLevel === "easy"
-                      ? "🔄"
-                      : currentLevel === "medium" || currentLevel === "hard"
-                        ? "✅"
-                        : "⏳"}
-                  </span>
+                  <span className="text-muted-foreground">Commands Completed</span>
+                  <span className="font-mono">{currentCommandIndex}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-yellow-500">Medium (9 commands)</span>
-                  <span>{currentLevel === "medium" ? "🔄" : currentLevel === "hard" ? "✅" : "⏳"}</span>
+                  <span className="text-muted-foreground">Total Commands</span>
+                  <span className="font-mono">{words.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-red-500">Hard (8 commands)</span>
-                  <span>{currentLevel === "hard" ? "🔄" : "⏳"}</span>
+                  <span className="text-muted-foreground">Time Remaining</span>
+                  <span className="font-mono">{formatTime(timeLeft)}</span>
                 </div>
               </CardContent>
             </Card>

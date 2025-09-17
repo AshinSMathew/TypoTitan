@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Trophy, Medal, Award, Target, Zap, Clock, Home, RotateCcw, Users, Loader2 } from "lucide-react"
+import { Trophy, Medal, Award, Target, Zap, Clock, Home, RotateCcw, Users, Loader2, RefreshCw } from "lucide-react"
 
 interface PlayerResult {
   id: string
@@ -122,7 +122,7 @@ export default function ResultsPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+          <RefreshCw className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
           <p>Loading results...</p>
         </div>
       </div>
