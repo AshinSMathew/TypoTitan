@@ -1,36 +1,21 @@
 "use client"
 import type React from "react"
 import { useState, useEffect, useRef, useMemo, useLayoutEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Terminal, Trophy } from "lucide-react"
 
-interface User{
-  id:string,
-  uid:string,
-  name: string,
-  email: string
-}
 
-interface Player {
-  id: string
-  name: string
-  wpm: number
-  accuracy: number
-  progress: number
-  isFinished: boolean
-  errors: number
-}
+import { LoadingScreen } from "@/components/game/LoadingScreen"
+import { StartScreen } from "@/components/game/StartScreen"
+import { ResultsScreen } from "@/components/game/ResultScreen"
+import { CommandDisplay } from "@/components/game/CommandDisplay"
+import { GameHeader } from "@/components/game/GameHeader"
+import { ProgressStats } from "@/components/game/ProgressStats"
+import { PlayerStats } from "@/components/game/PlayerStats"
 
-interface Command {
-  id: string
-  text: string
-  difficulty: "easy" | "medium" | "hard"
-  category: string
-}
+
+import type { User, Player, Command } from "@/lib/types"
 
 const COMMANDS: Command[] = [
   // --- EASY (8) ---
@@ -67,7 +52,6 @@ const COMMANDS: Command[] = [
 
 export default function GamePage() {
   const params = useParams()
-  const router = useRouter()
   const code = params.code as string
   const inputRef = useRef<HTMLInputElement>(null)
   const [currentCommandIndex, setCurrentCommandIndex] = useState(0)
@@ -84,6 +68,7 @@ export default function GamePage() {
   const [totalErrors, setTotalErrors] = useState(0)
   const [typedHistory, setTypedHistory] = useState<string[]>([])
   const [words, setWords] = useState<string[]>([])
+  const [persistentErrorIndices, setPersistentErrorIndices] = useState<number[]>([])
 
   const selfIdRef = useRef<string>("")
   const selfId = selfIdRef.current
@@ -212,15 +197,9 @@ export default function GamePage() {
     }
   }, [])
 
-  const INITIAL_TIME = 300 // 5 minutes in seconds
+  const INITIAL_TIME = 15 * 60 // 5 minutes in seconds
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME)
   const [timerRunning, setTimerRunning] = useState(false)
-  
-  const formatTime = (totalSec: number) => {
-    const m = Math.floor(totalSec / 60)
-    const s = totalSec % 60
-    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-  }
 
   useEffect(() => {
     if (!gameStarted) return
@@ -264,6 +243,7 @@ export default function GamePage() {
     setUserInput("")
     setTypedHistory([])
     setProgress(0)
+    setPersistentErrorIndices([])
   }
 
   const calculateWPM = () => {
@@ -298,18 +278,28 @@ export default function GamePage() {
     setWpm(newWpm)
     setAccuracy(newAccuracy)
 
+    // Track current errors
     const newErrors: number[] = []
     for (let i = 0; i < value.length; i++) {
-      if (value[i] !== currentCommand[i]) newErrors.push(i)
+      if (value[i] !== currentCommand[i]) {
+        newErrors.push(i)
+        
+        // Add to persistent errors if not already there
+        if (!persistentErrorIndices.includes(i)) {
+          setPersistentErrorIndices(prev => [...prev, i])
+          setTotalErrors(prev => prev + 1)
+        }
+      }
     }
     setErrors(newErrors)
 
-    // Move to next command when space is pressed and current command is completed
-    if (value.endsWith(' ') && value.trim() === currentCommand) {
+    // Automatically move to next command when current command is completed
+    if (value === currentCommand) {
       setTimeout(() => {
-        setTypedHistory([...typedHistory, value.trim()])
+        setTypedHistory([...typedHistory, value])
         setUserInput("")
         setErrors([])
+        setPersistentErrorIndices([])
         
         if (currentCommandIndex < words.length - 1) {
           const nextIndex = currentCommandIndex + 1
@@ -334,136 +324,22 @@ export default function GamePage() {
     e.stopPropagation()
   }
 
-  const renderWords = () => {
-    return (
-      <div className="font-mono text-lg md:text-xl leading-loose break-all bg-black/80 p-6 rounded-lg">
-        {/* Previously typed commands */}
-        <div className="text-muted-foreground opacity-60 mb-4">
-          {typedHistory.join(' ')}
-        </div>
-        
-        {/* Current command being typed */}
-        <div className="mb-4">
-          {currentCommand?.split("").map((char, index) => {
-            let className = "transition-colors duration-150"
-            if (index < userInput.length) {
-              if (userInput[index] === char) className += " text-primary"
-              else className += " text-destructive bg-destructive/20"
-            } else if (index === userInput.length) {
-              className += " bg-accent/50 animate-pulse"
-            } else {
-              className += " text-muted-foreground"
-            }
-            return (
-              <span key={index} className={className}>
-                {char}
-              </span>
-            )
-          })}
-        </div>
-        
-        {/* Upcoming commands */}
-        <div className="text-muted-foreground opacity-60">
-          {words.slice(currentCommandIndex + 1, currentCommandIndex + 3).join(' ')}
-        </div>
-      </div>
-    )
-  }
-
   if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <Terminal className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
-          <p>Loading room data...</p>
-        </div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   if (!gameStarted) {
-    return (
-      <div className="min-h-screen bg-background terminal-grid flex items-center justify-center p-4">
-        <Card className="border-primary/50 bg-card/50 backdrop-blur-sm max-w-md w-full">
-          <CardHeader className="text-center">
-            <Terminal className="w-16 h-16 text-primary neon-glow mx-auto mb-4" />
-            <CardTitle className="text-2xl font-mono">Ready to Hack, {currentUser.name}?</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              {"You'll face cybersecurity commands. Type as fast and accurately as possible!"}
-            </p>
-            <Button onClick={startGame} className="w-full neon-glow" size="lg">
-              Start Challenge
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <StartScreen currentUser={currentUser} startGame={startGame} />
   }
 
   if (showResults) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="border-primary/50 bg-card/50 backdrop-blur-sm max-w-md w-full">
-          <CardHeader className="text-center">
-            <Terminal className="w-16 h-16 text-primary neon-glow mx-auto mb-4" />
-            <CardTitle className="text-2xl font-mono">Challenge Complete!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-primary/10 p-4 rounded-lg">
-                <div className="text-3xl font-bold text-primary">{wpm}</div>
-                <div className="text-sm text-muted-foreground">WPM</div>
-              </div>
-              <div className="bg-secondary/10 p-4 rounded-lg">
-                <div className="text-3xl font-bold text-secondary">{accuracy}%</div>
-                <div className="text-sm text-muted-foreground">Accuracy</div>
-              </div>
-              <div className="bg-accent/10 p-4 rounded-lg">
-                <div className="text-3xl font-bold text-accent">{totalErrors}</div>
-                <div className="text-sm text-muted-foreground">Errors</div>
-              </div>
-              <div className="bg-green-500/10 p-4 rounded-lg">
-                <div className="text-3xl font-bold text-green-500">
-                  {Math.round(progress)}%
-                </div>
-                <div className="text-sm text-muted-foreground">Progress</div>
-              </div>
-            </div>
-            
-            <Button 
-              onClick={() => router.push(`/results/${code}`)}
-              className="w-full neon-glow"
-              size="lg"
-            >
-              <Trophy className="w-5 h-5 mr-2" />
-              View Leaderboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <ResultsScreen wpm={wpm} accuracy={accuracy} totalErrors={totalErrors} progress={progress} code={code} />
   }
 
   return (
     <div className="min-h-screen bg-background terminal-grid">
       <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <Terminal className="w-8 h-8 text-primary neon-glow" />
-            <div>
-              <h1 className="text-2xl font-bold font-mono">Cyber Arena</h1>
-              <p className="text-sm text-muted-foreground">Room: {code}</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              Time: <span className="font-mono text-primary">{formatTime(timeLeft)}</span>
-            </div>
-          </div>
-        </div>
+        <GameHeader code={code} timeLeft={timeLeft} />
 
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Main Typing Area */}
@@ -481,7 +357,14 @@ export default function GamePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {renderWords()}
+                <CommandDisplay 
+                  typedHistory={typedHistory}
+                  currentCommand={currentCommand}
+                  userInput={userInput}
+                  currentCommandIndex={currentCommandIndex}
+                  words={words}
+                  errorIndices={persistentErrorIndices}
+                />
                 <input
                   ref={inputRef}
                   type="text"
@@ -500,55 +383,12 @@ export default function GamePage() {
               </CardContent>
             </Card>
 
-            {/* Progress */}
-            <Card className="border-accent/50 bg-card/50 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-                  <Progress value={progress} className="h-2" />
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <div className="text-2xl font-bold text-primary">{wpm}</div>
-                      <div className="text-xs text-muted-foreground">WPM</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-secondary">{accuracy}%</div>
-                      <div className="text-xs text-muted-foreground">Accuracy</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-accent">{errors.length}</div>
-                      <div className="text-xs text-muted-foreground">Errors</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ProgressStats progress={progress} wpm={wpm} accuracy={accuracy} errors={totalErrors} />
           </div>
 
           {/* Player Stats Sidebar */}
           <div className="space-y-4">
-            <Card className="border-primary/30 bg-card/30 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-primary text-sm">Your Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Commands Completed</span>
-                  <span className="font-mono">{currentCommandIndex}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Commands</span>
-                  <span className="font-mono">{words.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Time Remaining</span>
-                  <span className="font-mono">{formatTime(timeLeft)}</span>
-                </div>
-              </CardContent>
-            </Card>
+            <PlayerStats currentCommandIndex={currentCommandIndex} words={words} timeLeft={timeLeft} />
           </div>
         </div>
       </div>
