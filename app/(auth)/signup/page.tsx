@@ -26,11 +26,18 @@ export default function SignupPage() {
       const cred = await createUserWithEmailAndPassword(clientAuth, email, password)
       if (name) await updateProfile(cred.user, { displayName: name })
       const token = await getIdToken(cred.user, true)
+
       const response = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: token, name, email, college })
+        body: JSON.stringify({ 
+          idToken: token, 
+          name, 
+          email, 
+          college,
+        })
       })
+      console.log("Sending data:", { name, email, college, idToken: token })
       
       const data = await response.json()
       
@@ -89,6 +96,7 @@ export default function SignupPage() {
                 required 
                 disabled={isLoading}
                 placeholder="Create a password (8 characters minimum)"
+                minLength={8}
               />
             </div>
             <div className="space-y-2">
@@ -96,9 +104,10 @@ export default function SignupPage() {
               <Input 
                 id="college" 
                 value={college} 
-                onChange={(e) => setCollege(e.target.value)} 
+                onChange={(e) => setCollege(e.target.value)}
+                required
                 disabled={isLoading}
-                placeholder="Enter your college name (optional)"
+                placeholder="Enter your college name"
               />
             </div>
             <Button 

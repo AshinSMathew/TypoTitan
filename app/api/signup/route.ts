@@ -4,8 +4,9 @@ import { adminAuth, adminDb, ADMIN_EMAILS } from "@/lib/firebaseAdmin"
 export async function POST(request: Request) {
   try {
     const { idToken, name, email, college } = await request.json()
+    //console.log("Received data:", { idToken, name, email, college })
 
-    if (!idToken || !name || !email) {
+    if (!idToken || !name || !email ||!college) {
       return NextResponse.json(
         { error: "idToken, name and email are required" },
         { status: 400 }
@@ -16,18 +17,21 @@ export async function POST(request: Request) {
 
     const isAdmin = ADMIN_EMAILS.has(email.toLowerCase())
 
-    await adminDb.collection('users').doc(decoded.uid).set({
+    const userData = {
       uid: decoded.uid,
       email,
       name,
-      college: college || null,
       isAdmin,
-    }, { merge: true })
+      college,
+    }
+    console.log(userData)
+
+    await adminDb.collection('users').doc(decoded.uid).set(userData)
 
     return NextResponse.json(
       { 
         success: true,
-        message: "Account ensured in Firestore",
+        message: "Account created successfully",
         isAdmin
       },
       { status: 201 }
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Signup error:", error)
     return NextResponse.json(
-      { error: "Invalid token" },
+      { error: "Invalid token or server error" },
       { status: 401 }
     )
   }

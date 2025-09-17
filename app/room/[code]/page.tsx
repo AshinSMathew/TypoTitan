@@ -238,7 +238,7 @@ export default function RoomPage() {
                             )}
                           </div>
                           <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                            {player.college || "No college specified"}
+                            {player.college || " "}
                           </p>
                         </div>
                       </div>
