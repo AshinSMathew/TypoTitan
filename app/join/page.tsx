@@ -78,7 +78,7 @@ export default function JoinRoomPage() {
           <div className="text-center mt-6">
             <Button
               variant="ghost"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/dashboard")}
               className="text-muted-foreground hover:text-foreground"
             >
               ← Back to Home
