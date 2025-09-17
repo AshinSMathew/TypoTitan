@@ -88,7 +88,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)} 
                 required 
                 disabled={isLoading}
-                placeholder="Create a password"
+                placeholder="Create a password (8 characters minimum)"
               />
             </div>
             <div className="space-y-2">
